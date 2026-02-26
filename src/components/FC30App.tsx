@@ -6,12 +6,12 @@ import { supabase } from "@/lib/supabase"
 // CONSTANTS
 // ═══════════════════════════════════════════════════════════════
 const THEMES: Record<string, Record<string, string>> = {
-  dark: {bg:"#0c0a08",card:"#151311",card2:"#1b1815",border:"#272119",borderMed:"#332b22",borderLight:"#42382d",
-    gold:"#c9a96e",goldBright:"#e0c285",goldDim:"rgba(201,169,110,0.08)",goldText:"#d4b87a",
-    green:"#5fa854",greenBright:"#7ec472",greenDim:"rgba(95,168,84,0.10)",greenGlow:"rgba(95,168,84,0.25)",
-    cream:"#ede0cf",cream2:"#c4b5a0",muted:"#8a7d6e",mutedDark:"#5c5145",
-    red:"#c45a48",urgent:"#e8543e",scott:"#7a9dba",filip:"#c9a96e",
-    hdrBg:"rgba(12,10,8,0.94)",tabBg:"rgba(12,10,8,0.95)"},
+  dark: {bg:"#111114",card:"#1c1c22",card2:"#24242c",border:"#2e2e3a",borderMed:"#3a3a4a",borderLight:"#4a4a5c",
+    gold:"#d4ad5e",goldBright:"#edc46f",goldDim:"rgba(212,173,94,0.12)",goldText:"#e0c06a",
+    green:"#5cb85c",greenBright:"#7ed67e",greenDim:"rgba(92,184,92,0.14)",greenGlow:"rgba(92,184,92,0.35)",
+    cream:"#eee8df",cream2:"#c8bfb0",muted:"#8888a0",mutedDark:"#5c5c70",
+    red:"#d45050",urgent:"#e8543e",scott:"#6ea8d4",filip:"#d4ad5e",
+    hdrBg:"rgba(17,17,20,0.95)",tabBg:"rgba(17,17,20,0.96)"},
   light: {bg:"#f5f1eb",card:"#ffffff",card2:"#f9f6f1",border:"#e2dbd0",borderMed:"#d5ccbe",borderLight:"#c8bfb0",
     gold:"#8b6c2f",goldBright:"#a68340",goldDim:"rgba(139,108,47,0.08)",goldText:"#7a5f28",
     green:"#4a8a3e",greenBright:"#5ea04f",greenDim:"rgba(74,138,62,0.08)",greenGlow:"rgba(74,138,62,0.20)",
@@ -66,15 +66,38 @@ const ROW_ID = "fc30_state"
 const initWk = (): any => ({verse:{text:"",scott:false,filip:false},whisper:{text:"",scott:false,filip:false},
   wkOpts:[],wkTarget:3,miTarget:10,miOutMin:5,workouts:{scott:[],filip:[]},mileage:{scott:[],filip:[]},tasks:[]})
 
+const WEEK1_TASKS = [
+  {id:"w1_block",name:"Build Your Name Block",subtitle:"Post photo on FC App",type:"once",assignee:"both",comp:{},
+    notes:"Take your block, etch/paint/build, put your last name on it. No sharpies. Must be weather resistant, no paper on sides. Pray that your name carries godliness, integrity, and represents Jesus well."},
+  {id:"w1_family",name:"Family Dinner Commitment",subtitle:"Post on FC App",type:"once",assignee:"both",comp:{},
+    notes:"Gather your family at the dinner table. Look them in the eyes, tell them you love them. Speak clearly your intentions as protector. Pray with them and over your home. Ask forgiveness if needed. If single, make this commitment to God for your future family."},
+  {id:"w1_photo",name:"Post Family Photo + Pray for 10 Families",subtitle:"Post on FC App",type:"once",assignee:"both",comp:{},
+    notes:"Post a photo of your family on the FC App. As other families appear, pause and pray for 10 different families. Prayer brings heaven stuff down to earth!"},
+  {id:"w1_whisper_post",name:"Post Whisper Ch.1 Thoughts",subtitle:"2 things that stuck out",type:"once",assignee:"both",comp:{},
+    notes:"Underline things in your Whisper book that hit you hardest. Post 2 thoughts from Chapter 1 on the FC App."},
+  {id:"w1_fitness",name:"Fitness Test",subtitle:"Record your baseline",type:"once",assignee:"both",comp:{},
+    notes:"Record pushups in 1 minute, sit-ups in 1 minute, and run a timed quarter mile. Write results on your bookmark."},
+]
+
+const initWk1 = (): any => ({
+  verse:{text:"Exodus 20:6",scott:false,filip:false},
+  whisper:{text:"Chapter 1 — Whisper",scott:false,filip:false},
+  wkOpts:["Full body (arms/chest/abs/legs)","40 pushups, 3min plank, 50 squats"],
+  wkTarget:3,miTarget:6,miOutMin:4,
+  workouts:{scott:[],filip:[]},mileage:{scott:[],filip:[]},
+  tasks:[...WEEK1_TASKS],
+})
+
 const DEFAULT_DATA = (): any => ({user:null,theme:"dark",brave:false,strikes:{scott:4,filip:4},streaks:{scott:0,filip:0},
   total:0,crossTaps:{},daily:{},weeks:{},progTasks:[],
   growth:{physical:{scott:"",filip:"",comments:[]},spiritual:{scott:"",filip:"",comments:[]},
     relational:{scott:"",filip:"",comments:[]},intellectual:{scott:"",filip:"",comments:[]}},
   giving:{scott:"",filip:""},events:[...EVENTS_INIT],log:[]})
 
-const gw = (d: any, w: number) => { if(!d.weeks[w]) d.weeks[w] = initWk(); return d.weeks[w] }
+const gw = (d: any, w: number) => { if(!d.weeks[w]) d.weeks[w] = w===1?initWk1():initWk(); return d.weeks[w] }
 const gd = (d: any, ds2: string) => { if(!d.daily[ds2]) d.daily[ds2] = {bible:{scott:false,filip:false},devotional:{scott:false,filip:false},journal:{scott:false,filip:false}}; return d.daily[ds2] }
 const addLog = (d: any, entry: any) => { d.log = [{...entry,time:new Date().toISOString()},...(d.log||[]).slice(0,500)] }
+const removeLog = (d: any, user: string, task: string) => { const idx = (d.log||[]).findIndex((e: any) => e.type==="complete" && e.user===user && e.task===task); if(idx>=0) d.log.splice(idx,1) }
 
 // Fetch latest state from Supabase
 async function fetchState(): Promise<any> {
@@ -178,7 +201,7 @@ function XDiv({t,idx,onTap}: {t:any,idx:number,onTap?:(i:number)=>void}) {
 
 function Card({children,style:s,glow,urgent,t,onClick}: {children:any,style?:any,glow?:string|null,urgent?:boolean,t:any,onClick?:()=>void}) {
   return <div onClick={onClick} style={{background:t.card,borderRadius:14,padding:14,marginBottom:8,
-    border:`1px solid ${urgent?"rgba(232,84,62,0.3)":t.border}`,boxShadow:glow?`0 0 14px ${glow}`:urgent?`0 0 10px rgba(232,84,62,0.15)`:"none",transition:"all 0.3s",...s}}>{children}</div>
+    border:`1.5px solid ${urgent?"rgba(232,84,62,0.3)":t.border}`,boxShadow:glow?`0 0 14px ${glow}`:urgent?`0 0 10px rgba(232,84,62,0.15)`:`0 1px 3px rgba(0,0,0,0.2)`,transition:"all 0.3s",...s}}>{children}</div>
 }
 
 function SH({children,icon,t,right}: {children:any,icon?:string,t:any,right?:any}) {
@@ -197,23 +220,29 @@ function Prog({v,max,color,h=5,label,t}: {v:number,max:number,color:string,h?:nu
 
 function StatIcon({done,sz=28,tap,onTap,t}: {done:boolean,sz?:number,tap?:boolean,onTap?:()=>void,t:any}) {
   const [burst,setBurst] = useState(false)
-  const go = () => { if(!tap||done) return; setBurst(true); onTap?.() }
-  useEffect(() => { if(burst){ const x = setTimeout(()=>setBurst(false),700); return ()=>clearTimeout(x) } }, [burst])
-  return <div style={{position:"relative",width:sz,height:sz,cursor:tap&&!done?"pointer":"default"}} onClick={go}>
-    {burst&&<div style={{position:"absolute",inset:0,borderRadius:8,border:`2px solid ${t.green}`,animation:"celRing 0.6s ease forwards",pointerEvents:"none"}}/>}
-    {burst&&[0,1,2,3,4,5].map(i=><div key={i} style={{position:"absolute",top:"50%",left:"50%",width:3,height:3,borderRadius:2,
-      background:i%2?t.green:t.goldBright,animation:`p${i%4} 0.6s ease forwards`,pointerEvents:"none"}}/>)}
+  const go = () => { if(!tap) return; if(!done) setBurst(true); onTap?.() }
+  useEffect(() => { if(burst){ const x = setTimeout(()=>setBurst(false),800); return ()=>clearTimeout(x) } }, [burst])
+  return <div style={{position:"relative",width:sz,height:sz,cursor:tap?"pointer":"default"}} onClick={go}>
+    {burst&&<div style={{position:"absolute",inset:-4,borderRadius:12,border:`2.5px solid ${t.green}`,animation:"celRing 0.7s ease forwards",pointerEvents:"none"}}/>}
+    {burst&&<div style={{position:"absolute",inset:-6,borderRadius:14,background:t.greenGlow,animation:"celRing 0.7s ease forwards",pointerEvents:"none"}}/>}
+    {burst&&[0,1,2,3,4,5,6,7].map(i=><div key={i} style={{position:"absolute",top:"50%",left:"50%",width:4,height:4,borderRadius:3,
+      background:i%2?t.greenBright:t.goldBright,animation:`p${i%4} 0.7s ease forwards`,pointerEvents:"none"}}/>)}
     <div style={{width:sz,height:sz,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
-      background:done?t.greenDim:"rgba(196,90,72,0.06)",border:`1.5px solid ${done?"rgba(95,168,84,0.3)":"rgba(196,90,72,0.18)"}`,transition:"all 0.25s"}}>
-      <span style={{fontSize:sz*.5,color:done?t.greenBright:t.red}}>{done?"✓":"✗"}</span></div></div>
+      background:done?t.greenDim:tap?t.card2:"rgba(100,100,120,0.06)",
+      border:`1.5px solid ${done?t.greenBright:tap?t.borderLight:"rgba(100,100,120,0.15)"}`,
+      transform:burst?"scale(1.15)":"scale(1)",transition:"all 0.25s cubic-bezier(0.34,1.56,0.64,1)",
+      boxShadow:done?`0 0 8px ${t.greenGlow}`:"none"}}>
+      <span style={{fontSize:sz*.5,fontWeight:700,color:done?t.greenBright:tap?t.muted:t.mutedDark}}>{done?"✓":"○"}</span></div></div>
 }
 
 function Btn({children,onClick,v="primary",sm,t,style:s,disabled:dis}: {children:any,onClick?:()=>void,v?:string,sm?:boolean,t:any,style?:any,disabled?:boolean}) {
   const base: any = {fontFamily:FB,fontWeight:600,border:"none",borderRadius:10,cursor:dis?"default":"pointer",transition:"all 0.2s",opacity:dis?.4:1}
-  const vs: any = {primary:{background:t.gold,color:"#0c0a08",padding:sm?"6px 14px":"10px 20px",fontSize:sm?12:14},
-    secondary:{background:"transparent",color:t.gold,padding:sm?"5px 13px":"9px 19px",fontSize:sm?12:14,border:`1.5px solid ${t.gold}`},
-    ghost:{background:"transparent",color:t.muted,padding:"4px 10px",fontSize:12},
-    danger:{background:"rgba(196,90,72,0.1)",color:t.red,padding:sm?"6px 14px":"10px 20px",fontSize:sm?12:14,border:`1px solid rgba(196,90,72,0.2)`}}
+  const vs: any = {primary:{background:`linear-gradient(135deg,${t.gold},${t.goldBright})`,color:"#111114",padding:sm?"7px 16px":"11px 22px",fontSize:sm?12:14,
+      boxShadow:`0 2px 8px rgba(0,0,0,0.3)`},
+    secondary:{background:"transparent",color:t.gold,padding:sm?"6px 14px":"10px 20px",fontSize:sm?12:14,border:`1.5px solid ${t.borderLight}`,
+      boxShadow:`0 1px 4px rgba(0,0,0,0.15)`},
+    ghost:{background:t.card2,color:t.cream2,padding:"5px 12px",fontSize:12,border:`1px solid ${t.borderMed}`},
+    danger:{background:"rgba(212,80,80,0.1)",color:t.red,padding:sm?"6px 14px":"10px 20px",fontSize:sm?12:14,border:`1px solid rgba(212,80,80,0.25)`}}
   return <button onClick={dis?undefined:onClick} style={{...base,...vs[v],...s}}>{children}</button>
 }
 
@@ -242,7 +271,7 @@ function TA({value,onChange,placeholder,t,rows=3}: {value:string,onChange:(v:str
 function Tog({opts,value,onChange,t}: {opts:{v:any,l:string}[],value:any,onChange:(v:any)=>void,t:any}) {
   return <div style={{display:"flex",gap:4,background:t.card2,borderRadius:10,padding:3}}>
     {opts.map(o=><button key={String(o.v)} onClick={()=>onChange(o.v)} style={{flex:1,padding:"6px 10px",borderRadius:8,border:"none",fontFamily:FB,fontSize:12,
-      fontWeight:600,cursor:"pointer",transition:"all 0.2s",background:value===o.v?t.gold:"transparent",color:value===o.v?"#0c0a08":t.muted}}>{o.l}</button>)}</div>
+      fontWeight:600,cursor:"pointer",transition:"all 0.2s",background:value===o.v?t.gold:"transparent",color:value===o.v?"#111114":t.muted}}>{o.l}</button>)}</div>
 }
 
 function UBadge({hrs,type="daily",t}: {hrs:number,type?:string,t:any}) {
@@ -376,7 +405,7 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes}: any) {
   const allDone = userDone&&partDone
   const hasExtra = !!(task.notes || (task.choices && task.choices.length > 0))
 
-  const content = <Card t={t} style={{opacity:allDone?.45:1}} glow={allDone?t.greenGlow:null}>
+  const content = <Card t={t} style={{opacity:allDone?.6:1,borderColor:allDone?`${t.green}44`:undefined}} glow={null}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       {isXt?<div style={{display:"flex",alignItems:"center",gap:4}}>
         <button onClick={()=>onXtimes(task.id,"scott",-1)} disabled={user!=="scott"} style={{width:22,height:22,borderRadius:6,
@@ -716,6 +745,7 @@ function PlanSheet({open,onClose,t,mutate,wk,prevTasks}: any) {
 function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,onMidnight,crossTap,onStreak,onMilestone}: any) {
   const [wkSheet,setWkSheet]=useState(false);const [miSheet,setMiSheet]=useState(false);const [addSheet,setAddSheet]=useState(false)
   const [editT,setEditT]=useState<any>(null);const [setupF,setSetupF]=useState<string|null>(null);const [planSheet,setPlanSheet]=useState(false)
+  const [showMiInfo,setShowMiInfo]=useState(false)
   const s=ds(d4d(dayNum));const w=gw(D,wk);const p=user==="scott"?"filip":"scott";const dc=gd(D,s)
   const maxDay=Math.min(dn(today()),69);const hl=hrsLeft(dayNum)
   const bibleChap=dayNum>=0&&dayNum<BIBLE.length?BIBLE[dayNum]:"Rest Day"
@@ -732,33 +762,39 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
         if(pdc?.bible?.[user]&&pdc?.devotional?.[user]&&pdc?.journal?.[user])stk++;else break}
         nd.streaks={...nd.streaks,[user]:stk};if([7,21,70].includes(stk))onStreak?.(stk)}
       if([100,250,500,1000].includes(nd.total))onMilestone?.(nd.total)
-    };return nd})
+    }else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,user,field)};return nd})
 
   const togWkly=(field: string)=>mutate((nd: any)=>{
     const w2=gw(nd,wk);const cur=w2[field]?.[user]||false
     w2[field]={...w2[field],[user]:!cur}
-    if(!cur){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user,task:field,date:s})};return nd})
+    if(!cur){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user,task:field,date:s})}
+    else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,user,field)};return nd})
 
   const togTask=(id: string,who: string,dayIdx?: number)=>mutate((nd: any)=>{
     const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
     if(!task.comp)task.comp={}
-    if(task.type==="daily"&&dayIdx!==undefined){const k=`${who}_${dayIdx}`;task.comp[k]=!task.comp[k]
-      if(task.comp[k]){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}}
-    else{task.comp[who]=!task.comp[who]
-      if(task.comp[who]){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}}
+    if(task.type==="daily"&&dayIdx!==undefined){const k=`${who}_${dayIdx}`;const was=task.comp[k];task.comp[k]=!was
+      if(!was){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}
+      else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)}}
+    else{const was=task.comp[who];task.comp[who]=!was
+      if(!was){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}
+      else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)}}
     if([100,250,500,1000].includes(nd.total))onMilestone?.(nd.total);return nd})
 
   const xtTask=(id: string,who: string,delta: number)=>{if(who!==user)return;mutate((nd: any)=>{
     const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
     if(!task.comp)task.comp={scott:0,filip:0};task.comp[who]=Math.max(0,(task.comp[who]||0)+delta)
-    if(delta>0){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})};return nd})}
+    if(delta>0){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}
+    else if(delta<0){nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)};return nd})}
 
   const togProg=(id: string,who: string)=>{if(who!==user)return;mutate((nd: any)=>{
     const task=(nd.progTasks||[]).find((x: any)=>x.id===id);if(!task)return nd
     if(!task.comp)task.comp={scott:false,filip:false}
-    if(task.type==="xtimes"){task.comp[who]=Math.min((task.comp[who]||0)+1,task.target||99)}
-    else{task.comp[who]=!task.comp[who]}
-    if(task.comp[who]){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})};return nd})}
+    if(task.type==="xtimes"){task.comp[who]=Math.min((task.comp[who]||0)+1,task.target||99)
+      nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}
+    else{const was=task.comp[who];task.comp[who]=!was
+      if(!was){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}
+      else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)}};return nd})}
 
   const sDailies=[dc.bible?.scott,dc.devotional?.scott,dc.journal?.scott].filter(Boolean).length
   const fDailies=[dc.bible?.filip,dc.devotional?.filip,dc.journal?.filip].filter(Boolean).length
@@ -803,14 +839,14 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     {/* Day Nav */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"10px 0"}}>
       <button onClick={()=>setDayNum(Math.max(0,dayNum-1))} disabled={dayNum<=0}
-        style={{background:"none",border:"none",color:dayNum<=0?t.mutedDark:t.cream,fontSize:18,cursor:"pointer",padding:8}}>◀</button>
+        style={{background:"none",border:"none",color:dayNum<=0?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>◀</button>
       <div style={{textAlign:"center"}}>
         <div style={{fontFamily:FD,fontSize:16,color:t.cream}}>{fmt(d4d(dayNum))}</div>
         <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center"}}>
           <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Day {dayNum+1} · Week {wk}</span>
           <UBadge hrs={hl} type="daily" t={t}/></div></div>
       <button onClick={()=>setDayNum(Math.min(maxDay,dayNum+1))} disabled={dayNum>=maxDay}
-        style={{background:"none",border:"none",color:dayNum>=maxDay?t.mutedDark:t.cream,fontSize:18,cursor:"pointer",padding:8}}>▶</button></div>
+        style={{background:"none",border:"none",color:dayNum>=maxDay?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>▶</button></div>
     {/* Battle Line */}
     <div style={{display:"flex",gap:2,marginBottom:14}}>{Array.from({length:10}).map((_,i)=>{const active=i<wk;const cur=i===wk-1
       return <div key={i} style={{flex:1,height:4,borderRadius:2,transition:"all 0.3s",
@@ -827,7 +863,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <StatIcon done={!!dc[item.k]?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togDaily(item.k)}/>
             <div style={{textAlign:"center",flex:1,padding:"0 8px"}}>
-              <div style={{fontFamily:FB,fontSize:14,fontWeight:600,color:t.cream,textDecoration:bothDone?"line-through":"none",opacity:bothDone?.45:1}}>{item.l}</div>
+              <div style={{fontFamily:FB,fontSize:14,fontWeight:600,color:t.cream,textDecoration:bothDone?"line-through":"none",opacity:bothDone?.6:1}}>{item.l}</div>
               <div style={{fontFamily:FB,fontSize:11,color:t.muted}}>{item.sub}</div></div>
             <StatIcon done={!!dc[item.k]?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togDaily(item.k)}/>
           </div></Card></SwipeRow>})}
@@ -852,25 +888,31 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     :<div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
     <XDiv t={t} idx={2} onTap={crossTap}/>
     {/* Workouts */}
-    <SH icon="💪" t={t} right={<div style={{display:"flex",gap:4}}>
-      <Btn v="ghost" sm t={t} onClick={()=>setSetupF("workout")}>⚙</Btn>
-      <Btn v="ghost" sm t={t} onClick={()=>setWkSheet(true)}>+ Log</Btn></div>}>Workouts</SH>
-    <Card t={t}><div style={{display:"flex",gap:12}}>
+    <SH icon="💪" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("workout")}>⚙ Setup</Btn>}>Workouts</SH>
+    <Card t={t}><div style={{display:"flex",gap:12,marginBottom:8}}>
       <div style={{flex:1}}><Prog v={(w.workouts?.scott||[]).length} max={w.wkTarget} color={t.scott} h={5} label="Scott" t={t}/></div>
       <div style={{flex:1}}><Prog v={(w.workouts?.filip||[]).length} max={w.wkTarget} color={t.filip} h={5} label="Filip" t={t}/></div>
-    </div>{w.wkOpts?.length>0&&<div style={{marginTop:8,display:"flex",flexWrap:"wrap",gap:4}}>
-      {w.wkOpts.map((o: string,i: number)=><span key={i} style={{fontFamily:FB,fontSize:11,color:t.muted,padding:"2px 8px",borderRadius:6,background:t.card2}}>{o}</span>)}</div>}</Card>
+    </div>{w.wkOpts?.length>0&&<div style={{marginBottom:8,display:"flex",flexWrap:"wrap",gap:4}}>
+      {w.wkOpts.map((o: string,i: number)=><span key={i} style={{fontFamily:FB,fontSize:11,color:t.muted,padding:"2px 8px",borderRadius:6,background:t.card2}}>{o}</span>)}</div>}
+    <button onClick={()=>setWkSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button></Card>
     {/* Mileage */}
-    <SH icon="🏃" t={t} right={<div style={{display:"flex",gap:4}}>
-      <Btn v="ghost" sm t={t} onClick={()=>setSetupF("mileage")}>⚙</Btn>
-      <Btn v="ghost" sm t={t} onClick={()=>setMiSheet(true)}>+ Log</Btn></div>}>Mileage</SH>
+    <SH icon="🏃" t={t} right={<div style={{display:"flex",gap:4,alignItems:"center"}}>
+      <button onClick={()=>setShowMiInfo(!showMiInfo)} style={{background:"none",border:"none",color:t.muted,fontSize:14,cursor:"pointer",padding:"4px"}}>ⓘ</button>
+      <Btn v="ghost" sm t={t} onClick={()=>setSetupF("mileage")}>⚙ Setup</Btn></div>}>Mileage</SH>
+    {showMiInfo&&<div style={{padding:"8px 12px",background:t.card2,borderRadius:8,marginBottom:8,border:`1px solid ${t.border}`}}>
+      <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.cream,marginBottom:4}}>Equivalent Mile Conversions:</div>
+      <div style={{fontFamily:FB,fontSize:11,color:t.cream2,lineHeight:1.6}}>
+        🏃 Running / Walking = 1:1<br/>🚴 Biking ÷ 3 (3 bike mi = 1 equiv)<br/>🏋️ Elliptical ÷ 2 (2 ellip mi = 1 equiv)<br/>🏊 Swimming × 3 (1 swim mi = 3 equiv)</div></div>}
     <Card t={t}><div style={{display:"flex",gap:12,marginBottom:6}}>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.scott} h={5} label="Scott (equiv)" t={t}/></div>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.filip} h={5} label="Filip (equiv)" t={t}/></div>
-    </div><div style={{display:"flex",gap:12}}>
+    </div><div style={{display:"flex",gap:12,marginBottom:8}}>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).filter((m: any)=>m.outdoor).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miOutMin} color={`${t.scott}88`} h={3} label="Outdoor" t={t}/></div>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).filter((m: any)=>m.outdoor).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miOutMin} color={`${t.filip}88`} h={3} label="Outdoor" t={t}/></div>
-    </div></Card>
+    </div>
+    <button onClick={()=>setMiSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>🏃 Log Mileage</button></Card>
     <XDiv t={t} idx={3} onTap={crossTap}/>
     {/* Weekly Tasks */}
     {sortedTasks.length>0&&<><SH icon="📋" t={t}>Weekly Tasks</SH>
@@ -879,7 +921,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     {/* Program Tasks */}
     {(D.progTasks||[]).length>0&&<><SH icon="🏆" t={t}>Full Program Tasks</SH>
       {(D.progTasks||[]).map((task: any)=>{const isDone=task.type==="xtimes"?(task.comp?.[user]||0)>=(task.target||1):!!task.comp?.[user]
-        return <Card key={task.id} t={t} style={{opacity:isDone?.45:1}}>
+        return <Card key={task.id} t={t} style={{opacity:isDone?.6:1,borderColor:isDone?`${t.green}44`:undefined}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             {task.type==="xtimes"?<span style={{fontFamily:FB,fontSize:13,fontWeight:700,color:t.scott}}>{task.comp?.scott||0}/{task.target}</span>
             :<StatIcon done={!!task.comp?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>togProg(task.id,"scott")}/>}
@@ -915,6 +957,7 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
   const [wkSheet,setWkSheet]=useState(false);const [miSheet,setMiSheet]=useState(false)
   const [addSheet,setAddSheet]=useState(false);const [editT,setEditT]=useState<any>(null)
   const [setupF,setSetupF]=useState<string|null>(null);const [planSheet,setPlanSheet]=useState(false)
+  const [showMiInfo,setShowMiInfo]=useState(false)
   const w=gw(D,wk);const dates=wkDates(wk)
   const hrsToEnd=Math.max(0,(new Date(d4d(wk*7-1)).setHours(23,59,59)-Date.now())/3600000)
   const maxWk=Math.min(Math.floor(dn(today())/7)+1,10)
@@ -927,29 +970,34 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
       const c=tk.comp?.[u];if(tk.type==="xtimes"){if((c||0)>=(tk.target||1))done++}else if(c)done++})
     return tot>0?Math.round((done/tot)*100):0}
 
-  const togWkly=(field: string)=>mutate((nd: any)=>{const w2=gw(nd,wk);w2[field]={...w2[field],[user]:!w2[field]?.[user]}
-    if(w2[field][user]){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user,task:field,date:tds()})};return nd})
+  const togWkly=(field: string)=>mutate((nd: any)=>{const w2=gw(nd,wk);const was=w2[field]?.[user];w2[field]={...w2[field],[user]:!was}
+    if(!was){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user,task:field,date:tds()})}
+    else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,user,field)};return nd})
   const togTask=(id: string,who: string,dayIdx?: number)=>{if(who!==user)return;mutate((nd: any)=>{
     const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
-    if(!task.comp)task.comp={};if(task.type==="daily"&&dayIdx!==undefined){const k=`${who}_${dayIdx}`;task.comp[k]=!task.comp[k]}
-    else{task.comp[who]=!task.comp[who]}
-    nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:tds()});return nd})}
+    if(!task.comp)task.comp={};if(task.type==="daily"&&dayIdx!==undefined){const k=`${who}_${dayIdx}`;const was=task.comp[k];task.comp[k]=!was
+      if(!was){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:tds()})}
+      else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)}}
+    else{const was=task.comp[who];task.comp[who]=!was
+      if(!was){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:tds()})}
+      else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)}};return nd})}
   const xtTask=(id: string,who: string,delta: number)=>{if(who!==user)return;mutate((nd: any)=>{
     const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
     if(!task.comp)task.comp={scott:0,filip:0};task.comp[who]=Math.max(0,(task.comp[who]||0)+delta)
-    if(delta>0){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:tds()})};return nd})}
+    if(delta>0){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:tds()})}
+    else if(delta<0){nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)};return nd})}
   const sortedTasks=[...(w.tasks||[])].sort((a: any,b: any)=>{
     const aDone=a.type==="xtimes"?(a.comp?.[user]||0)>=(a.target||1):!!a.comp?.[user]
     const bDone=b.type==="xtimes"?(b.comp?.[user]||0)>=(b.target||1):!!b.comp?.[user];return (aDone?1:0)-(bDone?1:0)})
 
   return <div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"10px 0"}}>
-      <button onClick={()=>setWk(Math.max(1,wk-1))} disabled={wk<=1} style={{background:"none",border:"none",color:wk<=1?t.mutedDark:t.cream,fontSize:18,cursor:"pointer",padding:8}}>◀</button>
+      <button onClick={()=>setWk(Math.max(1,wk-1))} disabled={wk<=1} style={{background:"none",border:"none",color:wk<=1?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>◀</button>
       <div style={{textAlign:"center"}}><div style={{fontFamily:FD,fontSize:18,color:t.cream}}>Week {wk}</div>
         <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center"}}>
           <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>{fmt(dates[0])} – {fmt(dates[6])}</span>
           <UBadge hrs={hrsToEnd} type="weekly" t={t}/></div></div>
-      <button onClick={()=>setWk(Math.min(maxWk,wk+1))} disabled={wk>=maxWk} style={{background:"none",border:"none",color:wk>=maxWk?t.mutedDark:t.cream,fontSize:18,cursor:"pointer",padding:8}}>▶</button></div>
+      <button onClick={()=>setWk(Math.min(10,wk+1))} disabled={wk>=10} style={{background:"none",border:"none",color:wk>=10?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>▶</button></div>
     <Card t={t} style={{marginBottom:12}}><div style={{display:"flex",gap:8}}>
       <div style={{flex:1}}><Prog v={calcWkPct("scott")} max={100} color={t.scott} h={5} label="Scott" t={t}/></div>
       <div style={{flex:1}}><Prog v={calcWkPct("filip")} max={100} color={t.filip} h={5} label="Filip" t={t}/></div></div></Card>
@@ -969,16 +1017,24 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
         <StatIcon done={!!w.whisper?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
       </div></Card>:<div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
     <XDiv t={t} idx={9} onTap={crossTap}/>
-    <SH icon="💪" t={t} right={<div style={{display:"flex",gap:4}}><Btn v="ghost" sm t={t} onClick={()=>setSetupF("workout")}>⚙</Btn>
-      <Btn v="ghost" sm t={t} onClick={()=>setWkSheet(true)}>+ Log</Btn></div>}>Workouts</SH>
-    <Card t={t}><div style={{display:"flex",gap:12}}>
+    <SH icon="💪" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("workout")}>⚙ Setup</Btn>}>Workouts</SH>
+    <Card t={t}><div style={{display:"flex",gap:12,marginBottom:8}}>
       <div style={{flex:1}}><Prog v={(w.workouts?.scott||[]).length} max={w.wkTarget} color={t.scott} h={5} label="Scott" t={t}/></div>
-      <div style={{flex:1}}><Prog v={(w.workouts?.filip||[]).length} max={w.wkTarget} color={t.filip} h={5} label="Filip" t={t}/></div></div></Card>
-    <SH icon="🏃" t={t} right={<div style={{display:"flex",gap:4}}><Btn v="ghost" sm t={t} onClick={()=>setSetupF("mileage")}>⚙</Btn>
-      <Btn v="ghost" sm t={t} onClick={()=>setMiSheet(true)}>+ Log</Btn></div>}>Mileage</SH>
-    <Card t={t}><div style={{display:"flex",gap:12}}>
+      <div style={{flex:1}}><Prog v={(w.workouts?.filip||[]).length} max={w.wkTarget} color={t.filip} h={5} label="Filip" t={t}/></div></div>
+    <button onClick={()=>setWkSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button></Card>
+    <SH icon="🏃" t={t} right={<div style={{display:"flex",gap:4,alignItems:"center"}}>
+      <button onClick={()=>setShowMiInfo(!showMiInfo)} style={{background:"none",border:"none",color:t.muted,fontSize:14,cursor:"pointer",padding:"4px"}}>ⓘ</button>
+      <Btn v="ghost" sm t={t} onClick={()=>setSetupF("mileage")}>⚙ Setup</Btn></div>}>Mileage</SH>
+    {showMiInfo&&<div style={{padding:"8px 12px",background:t.card2,borderRadius:8,marginBottom:8,border:`1px solid ${t.border}`}}>
+      <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.cream,marginBottom:4}}>Equivalent Mile Conversions:</div>
+      <div style={{fontFamily:FB,fontSize:11,color:t.cream2,lineHeight:1.6}}>
+        🏃 Running / Walking = 1:1<br/>🚴 Biking ÷ 3 (3 bike mi = 1 equiv)<br/>🏋️ Elliptical ÷ 2 (2 ellip mi = 1 equiv)<br/>🏊 Swimming × 3 (1 swim mi = 3 equiv)</div></div>}
+    <Card t={t}><div style={{display:"flex",gap:12,marginBottom:8}}>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.scott} h={5} label="Scott" t={t}/></div>
-      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.filip} h={5} label="Filip" t={t}/></div></div></Card>
+      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.filip} h={5} label="Filip" t={t}/></div></div>
+    <button onClick={()=>setMiSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>🏃 Log Mileage</button></Card>
     <XDiv t={t} idx={10} onTap={crossTap}/>
     {sortedTasks.length>0&&<><SH icon="📋" t={t}>Weekly Tasks</SH>
       {sortedTasks.map((task: any)=><TaskRow key={task.id} task={task} user={user} t={t} dayNum={dn(today())} wk={wk}
@@ -1097,10 +1153,15 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
       <div style={{fontFamily:FD,fontSize:15,fontWeight:600,color:t.cream,marginBottom:4}}>{evt.title}</div>
       <div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:2}}>{evt.date} · {evt.time}</div>
       <div style={{fontFamily:FB,fontSize:12,color:t.mutedDark,marginBottom:8}}>📍 {evt.loc}</div>
-      <div style={{display:"flex",justifyContent:"space-around"}}>
-        {["scott","filip"].map(who=><label key={who} style={{display:"flex",alignItems:"center",gap:6,fontFamily:FB,fontSize:12,color:t[who],cursor:"pointer"}}>
-          <input type="checkbox" checked={!!evt[who]} onChange={()=>user===who&&toggleEvt(evt.id)} disabled={user!==who} style={{accentColor:t[who]}}/> {who[0].toUpperCase()+who.slice(1)}
-        </label>)}</div></Card>)}
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        {["scott","filip"].map(who=>{const attending=!!evt[who];const isMe=user===who
+          return <button key={who} onClick={()=>isMe&&toggleEvt(evt.id)} disabled={!isMe}
+            style={{flex:1,padding:"10px 0",borderRadius:10,cursor:isMe?"pointer":"default",
+              border:`1.5px solid ${attending?t[who]:t.borderMed}`,
+              background:attending?`${t[who]}22`:"transparent",opacity:isMe?1:0.7,
+              fontFamily:FB,fontSize:13,fontWeight:700,color:attending?t[who]:t.muted}}>
+            {attending?"✓ ":"○ "}{who==="scott"?"Scott":"Filip"}{attending?" — Going":" — Not set"}
+          </button>})}</div></Card>)}
     <BSheet open={evtSheet} onClose={()=>setEvtSheet(false)} title="Add Event" t={t}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <Inp value={newEvt.title} onChange={(v: string)=>setNewEvt({...newEvt,title:v})} placeholder="Event name" t={t}/>
@@ -1117,14 +1178,9 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
 function HistoryTab({D,mutate,t,brave,onBrave}: any) {
   const [filter,setFilter]=useState("all");const [typeF,setTypeF]=useState("all");const [wkF,setWkF]=useState("all")
   const [bTaps,setBTaps]=useState(0);const bRef=useRef<any>(null)
-  const [confirmClear,setConfirmClear]=useState(false);const [confirmReset,setConfirmReset]=useState(false)
 
   const handleBTap=()=>{const n=bTaps+1;setBTaps(n);if(bRef.current)clearTimeout(bRef.current)
     bRef.current=setTimeout(()=>setBTaps(0),2000);if(n>=5){onBrave();setBTaps(0)}}
-  const clearLog=()=>{if(!confirmClear){setConfirmClear(true);return}
-    mutate((nd: any)=>{nd.log=[];return nd});setConfirmClear(false)}
-  const resetAll=()=>{if(!confirmReset){setConfirmReset(true);return}
-    mutate((_: any)=>{const fresh=DEFAULT_DATA();fresh.user=D.user;fresh.theme=D.theme;return fresh});setConfirmReset(false)}
 
   const log=(D.log||[]).filter((e: any)=>{
     if(filter!=="all"&&e.user!==filter)return false
@@ -1175,13 +1231,6 @@ function HistoryTab({D,mutate,t,brave,onBrave}: any) {
         </div>
         <div style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>{entry.date} · {new Date(entry.time).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>
       </div></div>)}
-    <div style={{marginTop:24,paddingTop:16,borderTop:`1px solid ${t.border}`}}>
-      <div style={{fontFamily:FB,fontSize:11,color:t.mutedDark,marginBottom:8}}>Data Management</div>
-      <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-        <Btn v="secondary" sm t={t} onClick={clearLog}>{confirmClear?"Tap again to confirm":"Clear Activity Log"}</Btn>
-        <Btn v="danger" sm t={t} onClick={resetAll}>{confirmReset?"Tap again — erases everything":"Reset All Data"}</Btn>
-      </div>
-      {(confirmClear||confirmReset)&&<div style={{fontFamily:FB,fontSize:11,color:t.red,marginTop:6}}>This cannot be undone.</div>}
     </div>
   </div>
 }
@@ -1215,7 +1264,7 @@ export default function FC30App() {
   const toggleBrave = () => mutate((nd: any) => { nd.brave = !nd.brave; return nd })
 
   if(loading) return <div style={{display:"flex",alignItems:"center",justifyContent:"center",minHeight:"100vh",
-    background:"#0c0a08",fontFamily:FD,color:"#c9a96e",fontSize:20}}><div style={{textAlign:"center"}}>
+    background:"#111114",fontFamily:FD,color:"#d4ad5e",fontSize:20}}><div style={{textAlign:"center"}}>
     <div style={{fontSize:32,marginBottom:8}}>⚔️</div>Hold the Line...</div></div>
 
   if(!D) return null
@@ -1292,15 +1341,15 @@ const CSS = `
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{overscroll-behavior:none}
 input,textarea,button{font-family:'Source Sans 3',system-ui,sans-serif}
-@keyframes celRing{0%{width:0;height:0;opacity:1}100%{width:40px;height:40px;opacity:0}}
-@keyframes p0{0%{transform:translate(-50%,-50%)}100%{transform:translate(-16px,-18px);opacity:0}}
-@keyframes p1{0%{transform:translate(-50%,-50%)}100%{transform:translate(14px,-16px);opacity:0}}
-@keyframes p2{0%{transform:translate(-50%,-50%)}100%{transform:translate(-14px,16px);opacity:0}}
-@keyframes p3{0%{transform:translate(-50%,-50%)}100%{transform:translate(16px,14px);opacity:0}}
+@keyframes celRing{0%{transform:scale(0.5);opacity:1}50%{opacity:0.6}100%{transform:scale(2);opacity:0}}
+@keyframes p0{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-20px,-22px) scale(0);opacity:0}}
+@keyframes p1{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(18px,-20px) scale(0);opacity:0}}
+@keyframes p2{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-18px,20px) scale(0);opacity:0}}
+@keyframes p3{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(20px,18px) scale(0);opacity:0}}
 @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
 @keyframes slideDown{0%{transform:translateX(-50%) translateY(-20px);opacity:0}100%{transform:translateX(-50%) translateY(0);opacity:1}}
 @keyframes lionPulse{0%{transform:scale(.5);opacity:0}50%{transform:scale(1.1);opacity:1}100%{transform:scale(1);opacity:1}}
 @keyframes freedomPulse{0%,100%{text-shadow:0 0 40px rgba(74,138,224,.5)}50%{text-shadow:0 0 60px rgba(74,138,224,.8)}}
 @keyframes urgPulse{0%,100%{opacity:1}50%{opacity:.6}}
-@keyframes goldPulse{0%,100%{border-color:rgba(201,169,110,.2)}50%{border-color:rgba(201,169,110,.4)}}
+@keyframes goldPulse{0%,100%{border-color:rgba(212,173,94,.2)}50%{border-color:rgba(212,173,94,.4)}}
 `
