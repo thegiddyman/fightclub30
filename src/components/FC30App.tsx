@@ -1305,7 +1305,6 @@ function HistoryTab({D,mutate,t,brave,onBrave}: any) {
         </div>
         <div style={{fontFamily:FB,fontSize:11,color:t.mutedDark}}>{entry.date} · {new Date(entry.time).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>
       </div></div>)}
-    </div>
   </div>
 }
 
