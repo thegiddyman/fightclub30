@@ -206,14 +206,14 @@ function Card({children,style:s,glow,urgent,t,onClick}: {children:any,style?:any
 
 function SH({children,icon,t,right}: {children:any,icon?:string,t:any,right?:any}) {
   return <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"14px 0 6px"}}>
-    <div style={{display:"flex",alignItems:"center",gap:6}}>{icon&&<span style={{fontSize:13}}>{icon}</span>}<h3 style={{fontFamily:FD,fontSize:15,color:t.cream2,fontWeight:600,margin:0}}>{children}</h3></div>{right}</div>
+    <div style={{display:"flex",alignItems:"center",gap:6}}>{icon&&<span style={{fontSize:15}}>{icon}</span>}<h3 style={{fontFamily:FD,fontSize:17,color:t.cream2,fontWeight:600,margin:0}}>{children}</h3></div>{right}</div>
 }
 
 function Prog({v,max,color,h=5,label,t}: {v:number,max:number,color:string,h?:number,label:string,t:any}) {
   const pct = max>0?Math.min((v/max)*100,100):0; const hit = v>=max&&max>0
   return <div><div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
-    <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>{label}</span>
-    <span style={{fontFamily:FB,fontSize:11,fontWeight:700,color:hit?t.greenBright:t.cream2}}>{typeof v==="number"&&v%1?v.toFixed(1):v}/{max}{hit?" ✦":""}</span>
+    <span style={{fontFamily:FB,fontSize:12,color:t.muted}}>{label}</span>
+    <span style={{fontFamily:FB,fontSize:12,fontWeight:700,color:hit?t.greenBright:t.cream2}}>{typeof v==="number"&&v%1?v.toFixed(1):v}/{max}{hit?" ✦":""}</span>
   </div><div style={{height:h,borderRadius:h,background:t.border,overflow:"hidden"}}>
     <div style={{height:"100%",borderRadius:h,width:`${pct}%`,transition:"width 0.5s",background:hit?`linear-gradient(90deg,${color},${t.goldBright})`:color}}/></div></div>
 }
@@ -253,19 +253,19 @@ function BSheet({open,onClose,title,t,children}: {open:boolean,onClose:()=>void,
     <div style={{position:"absolute",bottom:0,left:0,right:0,background:t.card,borderRadius:"20px 20px 0 0",
       padding:"16px 20px 32px",maxHeight:"80vh",overflowY:"auto",zIndex:101}}>
       <div style={{width:36,height:4,borderRadius:2,background:t.borderMed,margin:"0 auto 16px"}}/>
-      <h3 style={{fontFamily:FD,fontSize:18,color:t.cream,margin:"0 0 16px"}}>{title}</h3>{children}</div></div>
+      <h3 style={{fontFamily:FD,fontSize:20,color:t.cream,margin:"0 0 16px"}}>{title}</h3>{children}</div></div>
 }
 
 function Inp({value,onChange,placeholder,t,type="text",style:s}: {value:string,onChange:(v:string)=>void,placeholder?:string,t:any,type?:string,style?:any}) {
   return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
-    style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",borderRadius:10,border:`1px solid ${t.borderMed}`,
-      background:t.card2,color:t.cream,fontFamily:FB,fontSize:14,outline:"none",...s}}/>
+    style={{width:"100%",boxSizing:"border-box",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${t.borderMed}`,
+      background:t.card2,color:t.cream,fontFamily:FB,fontSize:15,outline:"none",...s}}/>
 }
 
 function TA({value,onChange,placeholder,t,rows=3}: {value:string,onChange:(v:string)=>void,placeholder?:string,t:any,rows?:number}) {
   return <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows}
-    style={{width:"100%",boxSizing:"border-box",padding:"10px 12px",borderRadius:10,border:`1px solid ${t.borderMed}`,
-      background:t.card2,color:t.cream,fontFamily:FB,fontSize:14,outline:"none",resize:"vertical"}}/>
+    style={{width:"100%",boxSizing:"border-box",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${t.borderMed}`,
+      background:t.card2,color:t.cream,fontFamily:FB,fontSize:15,outline:"none",resize:"vertical"}}/>
 }
 
 function Tog({opts,value,onChange,t}: {opts:{v:any,l:string}[],value:any,onChange:(v:any)=>void,t:any}) {
@@ -373,21 +373,21 @@ function SmartBar({D,user,dayNum,wk,t,brave}: {D:any,user:string,dayNum:number,w
     else if(streak>=5){msg=`${streak} day streak 🔥 Keep it going`;icon="🔥"}
     else{msg=`Day ${dayNum+1} of 70 — Hold the line.`;icon="⚔️"}
   }
-  return <div style={{padding:"8px 14px",background:t.goldDim,borderRadius:10,marginBottom:10,border:"1px solid rgba(201,169,110,0.12)"}}>
-    <div style={{fontFamily:FB,fontSize:12,fontWeight:600,color:t.goldText}}><span style={{marginRight:6}}>{icon}</span>{msg}</div></div>
+  return <div style={{padding:"10px 14px",background:t.goldDim,borderRadius:10,marginBottom:10,border:`1px solid ${t.gold}33`}}>
+    <div style={{fontFamily:FB,fontSize:14,fontWeight:600,color:t.goldText}}><span style={{marginRight:6}}>{icon}</span>{msg}</div></div>
 }
 
 // ═══════════════════════════════════════════════════════════════
 // TASK ROW
 // ═══════════════════════════════════════════════════════════════
 function DailyMiniChecks({task,who,user,dayNum,wk,t,onToggle}: any) {
-  return <div style={{display:"flex",gap:2}}>
+  return <div style={{display:"flex",gap:3}}>
     {DAYS_SHORT.map((d,i)=>{
       const k=`${who}_${i}`;const done=!!task.comp?.[k];const isToday=i===(dayNum-((wk-1)*7))
       return <button key={i} onClick={()=>who===user&&onToggle(task.id,who,i)}
-        style={{width:16,height:16,borderRadius:4,border:`1px solid ${done?t.green:isToday?t.gold:t.borderMed}`,
+        style={{width:20,height:20,borderRadius:5,border:`1.5px solid ${done?t.green:isToday?t.gold:t.borderMed}`,
           background:done?t.greenDim:"transparent",display:"flex",alignItems:"center",justifyContent:"center",
-          cursor:who===user?"pointer":"default",fontSize:7,color:done?t.green:t.mutedDark,padding:0}}>
+          cursor:who===user?"pointer":"default",fontSize:8,color:done?t.green:t.mutedDark,padding:0}}>
         {done?"✓":d[0]}</button>})}
   </div>
 }
@@ -421,13 +421,13 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes}: any) {
       <div style={{textAlign:"center",flex:1,padding:"0 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
           <div style={{cursor:"pointer"}} onClick={()=>onEdit?.(task)}>
-            <div style={{fontFamily:FB,fontSize:13,fontWeight:600,color:t.cream,textDecoration:allDone?"line-through":"none"}}>{task.name}</div>
+            <div style={{fontFamily:FB,fontSize:15,fontWeight:600,color:t.cream,textDecoration:allDone?"line-through":"none"}}>{task.name}</div>
           </div>
           {hasExtra&&<button onClick={(e)=>{e.stopPropagation();setExpanded(!expanded)}}
             style={{background:"none",border:"none",color:t.muted,fontSize:10,cursor:"pointer",padding:"2px 4px",
               transform:expanded?"rotate(90deg)":"none",transition:"transform 0.2s"}}>▸</button>}
         </div>
-        {task.subtitle&&<div style={{fontFamily:FB,fontSize:11,color:t.muted}}>{task.subtitle}</div>}
+        {task.subtitle&&<div style={{fontFamily:FB,fontSize:13,color:t.muted}}>{task.subtitle}</div>}
         {isXt&&<div style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>Target: {task.target}×</div>}
       </div>
       {isXt?<div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -718,24 +718,93 @@ function EditTaskSheet({open,task,onClose,t,mutate,wk}: any) {
     </div></BSheet>
 }
 
-function PlanSheet({open,onClose,t,mutate,wk,prevTasks}: any) {
+function PlanSheet({open,onClose,t,mutate,wk,prevTasks,D}: any) {
   const nextWk=wk+1;const [copied,setCopied]=useState<Record<string,boolean>>({})
+  const [verse,setVerse]=useState("");const [whisper,setWhisper]=useState("")
+  const [wkTarget,setWkTarget]=useState("3");const [miTarget,setMiTarget]=useState("6");const [miOut,setMiOut]=useState("4")
+  const [wkOpts,setWkOpts]=useState("");const [setupCopied,setSetupCopied]=useState(false)
   if(nextWk>10)return null
-  const copyTask=(task: any)=>{mutate((nd: any)=>{const nw=gw(nd,nextWk)
+  const nw=D?.weeks?.[nextWk]
+  const hasVerse=!!nw?.verse?.text;const hasWhisper=!!nw?.whisper?.text;const hasSetup=nw?.wkTarget>0
+  const taskCount=(nw?.tasks||[]).length
+
+  const copyTask=(task: any)=>{mutate((nd: any)=>{const nw2=gw(nd,nextWk)
     const newT={...task,id:`t_${Date.now()}_c`,comp:task.type==="xtimes"?{scott:0,filip:0}:task.type==="daily"?{}:{scott:false,filip:false}}
-    nw.tasks=[...nw.tasks,newT];return nd});setCopied({...copied,[task.id]:true})}
-  const copySetup=()=>{mutate((nd: any)=>{const pw=gw(nd,wk);const nw=gw(nd,nextWk)
-    nw.wkOpts=[...pw.wkOpts];nw.wkTarget=pw.wkTarget;nw.miTarget=pw.miTarget;nw.miOutMin=pw.miOutMin;return nd})}
+    nw2.tasks=[...nw2.tasks,newT];return nd});setCopied({...copied,[task.id]:true})}
+  const copyAllTasks=()=>{mutate((nd: any)=>{const nw2=gw(nd,nextWk)
+    ;(prevTasks||[]).forEach((task: any)=>{if(!copied[task.id]){
+      const newT={...task,id:`t_${Date.now()}_${Math.random().toString(36).slice(2,6)}`,
+        comp:task.type==="xtimes"?{scott:0,filip:0}:task.type==="daily"?{}:{scott:false,filip:false}}
+      nw2.tasks=[...nw2.tasks,newT]}});return nd})
+    const allCopied: Record<string,boolean>={};(prevTasks||[]).forEach((t2: any)=>{allCopied[t2.id]=true});setCopied({...copied,...allCopied})}
+  const copySetup=()=>{mutate((nd: any)=>{const pw=gw(nd,wk);const nw2=gw(nd,nextWk)
+    nw2.wkOpts=[...pw.wkOpts];nw2.wkTarget=pw.wkTarget;nw2.miTarget=pw.miTarget;nw2.miOutMin=pw.miOutMin;return nd});setSetupCopied(true)}
+  const saveVerse=()=>{if(!verse.trim())return;mutate((nd: any)=>{const nw2=gw(nd,nextWk);nw2.verse={...nw2.verse,text:verse.trim()};return nd})}
+  const saveWhisper=()=>{if(!whisper.trim())return;mutate((nd: any)=>{const nw2=gw(nd,nextWk);nw2.whisper={...nw2.whisper,text:whisper.trim()};return nd})}
+  const saveTargets=()=>{mutate((nd: any)=>{const nw2=gw(nd,nextWk)
+    nw2.wkTarget=parseInt(wkTarget)||3;nw2.miTarget=parseInt(miTarget)||6;nw2.miOutMin=parseInt(miOut)||4
+    if(wkOpts.trim())nw2.wkOpts=wkOpts.split(",").map((s: string)=>s.trim()).filter(Boolean);return nd})}
+
   return <BSheet open={open} onClose={onClose} title={`Plan Week ${nextWk}`} t={t}>
-    <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:12}}>
-      Set up tasks for {fmt(d4d((nextWk-1)*7))} – {fmt(d4d(nextWk*7-1))}</div>
-    <Btn v="secondary" sm t={t} onClick={copySetup} style={{marginBottom:12}}>Copy workout/mileage setup from this week</Btn>
-    {(prevTasks||[]).length>0&&<><div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2,marginBottom:8}}>Copy tasks from Week {wk}:</div>
-      {prevTasks.map((task: any)=><div key={task.id} style={{display:"flex",alignItems:"center",gap:8,padding:"6px 0",borderBottom:`1px solid ${t.border}`}}>
+    <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:16}}>
+      {fmt(d4d((nextWk-1)*7))} – {fmt(d4d(nextWk*7-1))}</div>
+
+    {/* Status summary */}
+    <Card t={t} style={{marginBottom:16,background:t.card2}}>
+      <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2,marginBottom:8}}>Week {nextWk} Status</div>
+      <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+        {[{l:"Verse",ok:hasVerse},{l:"Whisper",ok:hasWhisper},{l:"Fitness",ok:hasSetup||setupCopied},{l:`${taskCount} Tasks`,ok:taskCount>0}].map(s=>
+          <span key={s.l} style={{fontFamily:FB,fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:6,
+            background:s.ok?t.greenDim:t.card,border:`1px solid ${s.ok?t.greenBright:t.borderMed}`,
+            color:s.ok?t.greenBright:t.muted}}>{s.ok?"✓ ":"○ "}{s.l}</span>)}</div></Card>
+
+    {/* Memory Verse */}
+    <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2,marginBottom:6}}>📖 Memory Verse</div>
+    {hasVerse?<div style={{fontFamily:FB,fontSize:13,color:t.green,marginBottom:12}}>✓ Set: {nw.verse.text}</div>
+    :<div style={{display:"flex",gap:6,marginBottom:12}}>
+      <Inp value={verse} onChange={setVerse} placeholder="e.g. Romans 8:28" t={t} style={{flex:1,padding:"8px 10px",fontSize:12}}/>
+      <Btn v="primary" sm t={t} onClick={saveVerse}>Set</Btn></div>}
+
+    {/* Whisper Reading */}
+    <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2,marginBottom:6}}>📕 Whisper Reading</div>
+    {hasWhisper?<div style={{fontFamily:FB,fontSize:13,color:t.green,marginBottom:12}}>✓ Set: {nw.whisper.text}</div>
+    :<div style={{display:"flex",gap:6,marginBottom:12}}>
+      <Inp value={whisper} onChange={setWhisper} placeholder="e.g. Chapter 2" t={t} style={{flex:1,padding:"8px 10px",fontSize:12}}/>
+      <Btn v="primary" sm t={t} onClick={saveWhisper}>Set</Btn></div>}
+
+    {/* Fitness Targets */}
+    <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2,marginBottom:6}}>💪 Fitness Setup</div>
+    {setupCopied||hasSetup?<div style={{fontFamily:FB,fontSize:13,color:t.green,marginBottom:4}}>
+      ✓ Workouts: {nw?.wkTarget||3}x/wk · Mileage: {nw?.miTarget||6} total / {nw?.miOutMin||4} outdoor</div>
+    :<Card t={t} style={{marginBottom:4}}>
+      <div style={{display:"flex",gap:8,marginBottom:8}}>
+        <div style={{flex:1}}><div style={{fontFamily:FB,fontSize:11,color:t.muted,marginBottom:3}}>Workouts/wk</div>
+          <Inp value={wkTarget} onChange={setWkTarget} placeholder="3" t={t} type="number" style={{padding:"6px 8px",fontSize:12}}/></div>
+        <div style={{flex:1}}><div style={{fontFamily:FB,fontSize:11,color:t.muted,marginBottom:3}}>Total miles</div>
+          <Inp value={miTarget} onChange={setMiTarget} placeholder="6" t={t} type="number" style={{padding:"6px 8px",fontSize:12}}/></div>
+        <div style={{flex:1}}><div style={{fontFamily:FB,fontSize:11,color:t.muted,marginBottom:3}}>Outdoor mi</div>
+          <Inp value={miOut} onChange={setMiOut} placeholder="4" t={t} type="number" style={{padding:"6px 8px",fontSize:12}}/></div></div>
+      <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginBottom:3}}>Workout options (comma-separated)</div>
+      <Inp value={wkOpts} onChange={setWkOpts} placeholder="e.g. Full body, HIIT, Pushup circuit" t={t} style={{padding:"6px 8px",fontSize:12,marginBottom:8}}/>
+      <div style={{display:"flex",gap:8}}>
+        <Btn v="primary" sm t={t} onClick={saveTargets}>Set Targets</Btn>
+        <Btn v="secondary" sm t={t} onClick={copySetup}>Copy from Week {wk}</Btn></div></Card>}
+    <div style={{height:1,background:t.border,margin:"12px 0"}}/>
+
+    {/* Copy Tasks */}
+    {(prevTasks||[]).length>0&&<>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:8}}>
+        <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2}}>📋 Tasks from Week {wk}</div>
+        {Object.keys(copied).length<prevTasks.length&&
+          <Btn v="ghost" sm t={t} onClick={copyAllTasks}>Copy All</Btn>}</div>
+      {prevTasks.map((task: any)=><div key={task.id} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 0",borderBottom:`1px solid ${t.border}`}}>
         <span style={{flex:1,fontFamily:FB,fontSize:13,color:t.cream}}>{task.name}</span>
-        <span style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>{task.type}</span>
-        {copied[task.id]?<span style={{fontFamily:FB,fontSize:11,color:t.green}}>✓ Copied</span>
-        :<Btn v="ghost" sm t={t} onClick={()=>copyTask(task)}>Copy</Btn>}</div>)}</>}
+        <span style={{fontFamily:FB,fontSize:10,color:t.mutedDark,padding:"2px 6px",background:t.card2,borderRadius:4}}>{task.type}</span>
+        {copied[task.id]?<span style={{fontFamily:FB,fontSize:11,color:t.green,fontWeight:600}}>✓ Added</span>
+        :<Btn v="ghost" sm t={t} onClick={()=>copyTask(task)}>+ Copy</Btn>}</div>)}</>}
+
+    <div style={{fontFamily:FB,fontSize:11,color:t.mutedDark,marginTop:16,textAlign:"center"}}>
+      You can also add new tasks from the Week {nextWk} tab after navigating there</div>
   </BSheet>
 }
 
@@ -815,22 +884,30 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
 
   return <div>
     <SmartBar D={D} user={user} dayNum={dayNum} wk={wk} t={t} brave={brave}/>
+    {isWed&&wk<10&&<div onClick={()=>setPlanSheet(true)} style={{margin:"0 0 10px",padding:"12px 16px",background:`linear-gradient(135deg,${t.goldDim},${t.card2})`,
+      borderRadius:12,border:`1.5px solid ${t.gold}44`,cursor:"pointer",animation:"goldPulse 3s ease infinite"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div><div style={{fontFamily:FB,fontSize:14,fontWeight:700,color:t.goldText}}>📋 Plan Week {wk+1}</div>
+          <div style={{fontFamily:FB,fontSize:12,color:t.muted,marginTop:2}}>New week starts tomorrow — tap to set up</div></div>
+        <span style={{fontSize:20,color:t.gold}}>›</span></div></div>}
     {/* Scoreboard */}
     <Card t={t} style={{marginBottom:12}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-        <div style={{textAlign:"center",flex:1}}>
-          <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.scott,marginBottom:4}}>SCOTT</div>
-          <div style={{display:"flex",gap:4,justifyContent:"center"}}>
-            {["bible","devotional","journal"].map(f=><StatIcon key={f} done={!!dc[f]?.scott} sz={26} tap={user==="scott"} t={t}
-              onTap={()=>user==="scott"&&togDaily(f)}/>)}</div></div>
-        <div style={{textAlign:"center",padding:"0 8px"}}>
-          <div style={{fontFamily:FD,fontSize:11,color:t.muted,marginBottom:2}}>DAILY</div>
-          {D.streaks?.[user]>0&&<div style={{fontFamily:FB,fontSize:10,color:t.goldText}}>🔥 {D.streaks[user]}</div>}</div>
-        <div style={{textAlign:"center",flex:1}}>
-          <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.filip,marginBottom:4}}>FILIP</div>
-          <div style={{display:"flex",gap:4,justifyContent:"center"}}>
-            {["bible","devotional","journal"].map(f=><StatIcon key={f} done={!!dc[f]?.filip} sz={26} tap={user==="filip"} t={t}
-              onTap={()=>user==="filip"&&togDaily(f)}/>)}</div></div>
+        {["scott","filip"].map(who=>{
+          const builtIn=["bible","devotional","journal"].map(f=>({k:f,done:!!dc[f]?.[who]}))
+          const dailyTasks=(w.tasks||[]).filter((tk: any)=>tk.type==="daily"&&(!tk.assignee||tk.assignee==="both"||tk.assignee===who))
+            .map((tk: any)=>{const dow=dayNum-((wk-1)*7);return{k:tk.id,done:!!tk.comp?.[`${who}_${dow}`]}})
+          const all=[...builtIn,...dailyTasks]
+          return <div key={who} style={{textAlign:"center",flex:1}}>
+            <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[who],marginBottom:4}}>{who.toUpperCase()}</div>
+            <div style={{display:"flex",gap:3,justifyContent:"center",flexWrap:"wrap"}}>
+              {all.map(item=><div key={item.k} style={{width:18,height:18,borderRadius:5,display:"flex",alignItems:"center",justifyContent:"center",
+                background:item.done?t.greenDim:t.card2,border:`1.5px solid ${item.done?t.greenBright:t.borderMed}`,transition:"all 0.3s"}}>
+                <span style={{fontSize:10,color:item.done?t.greenBright:t.mutedDark}}>{item.done?"✓":""}</span></div>)}</div>
+          </div>})}
+        <div style={{textAlign:"center",padding:"0 8px",minWidth:50}}>
+          <div style={{fontFamily:FD,fontSize:12,color:t.muted,marginBottom:2}}>DAILY</div>
+          {D.streaks?.[user]>0&&<div style={{fontFamily:FB,fontSize:11,color:t.goldText}}>🔥 {D.streaks[user]}</div>}</div>
       </div>
       <div style={{display:"flex",gap:8}}>
         <div style={{flex:1}}><Prog v={calcWkPct("scott")} max={100} color={t.scott} h={4} label="Week" t={t}/></div>
@@ -841,7 +918,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
       <button onClick={()=>setDayNum(Math.max(0,dayNum-1))} disabled={dayNum<=0}
         style={{background:"none",border:"none",color:dayNum<=0?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>◀</button>
       <div style={{textAlign:"center"}}>
-        <div style={{fontFamily:FD,fontSize:16,color:t.cream}}>{fmt(d4d(dayNum))}</div>
+        <div style={{fontFamily:FD,fontSize:18,color:t.cream}}>{fmt(d4d(dayNum))}</div>
         <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center"}}>
           <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Day {dayNum+1} · Week {wk}</span>
           <UBadge hrs={hl} type="daily" t={t}/></div></div>
@@ -861,31 +938,31 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
       return <SwipeRow key={item.k} done={!!dc[item.k]?.[user]} t={t} onComplete={()=>togDaily(item.k)}>
         <Card t={t} glow={bothDone?t.greenGlow:null} urgent={hl<=2&&!dc[item.k]?.[user]}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-            <StatIcon done={!!dc[item.k]?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togDaily(item.k)}/>
+            <StatIcon done={!!dc[item.k]?.scott} sz={30} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togDaily(item.k)}/>
             <div style={{textAlign:"center",flex:1,padding:"0 8px"}}>
-              <div style={{fontFamily:FB,fontSize:14,fontWeight:600,color:t.cream,textDecoration:bothDone?"line-through":"none",opacity:bothDone?.6:1}}>{item.l}</div>
-              <div style={{fontFamily:FB,fontSize:11,color:t.muted}}>{item.sub}</div></div>
-            <StatIcon done={!!dc[item.k]?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togDaily(item.k)}/>
+              <div style={{fontFamily:FB,fontSize:16,fontWeight:600,color:t.cream,textDecoration:bothDone?"line-through":"none",opacity:bothDone?.6:1}}>{item.l}</div>
+              <div style={{fontFamily:FB,fontSize:13,color:t.muted}}>{item.sub}</div></div>
+            <StatIcon done={!!dc[item.k]?.filip} sz={30} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togDaily(item.k)}/>
           </div></Card></SwipeRow>})}
     <XDiv t={t} idx={1} onTap={crossTap}/>
     {/* Verse */}
     <SH icon="📜" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("verse")}>{w.verse?.text?"Edit":"+ Set"}</Btn>}>Memory Verse</SH>
-    {w.verse?.text?<Card t={t}><div style={{fontFamily:FD,fontSize:13,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.5}}>&quot;{w.verse.text}&quot;</div>
+    {w.verse?.text?<Card t={t}><div style={{fontFamily:FD,fontSize:15,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.5}}>&quot;{w.verse.text}&quot;</div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.verse?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
-        <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Memorized?</span>
-        <StatIcon done={!!w.verse?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
+        <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
+        <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Memorized?</span>
+        <StatIcon done={!!w.verse?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
       </div></Card>
-    :<div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,padding:"8px 0"}}>No verse set this week</div>}
+    :<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No verse set this week</div>}
     {/* Whisper */}
     <SH icon="📚" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("whisper")}>{w.whisper?.text?"Edit":"+ Set"}</Btn>}>Whisper Reading</SH>
-    {w.whisper?.text?<Card t={t}><div style={{fontFamily:FB,fontSize:13,color:t.cream2,marginBottom:8}}>{w.whisper.text}</div>
+    {w.whisper?.text?<Card t={t}><div style={{fontFamily:FB,fontSize:15,color:t.cream2,marginBottom:8}}>{w.whisper.text}</div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.whisper?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
-        <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Complete?</span>
-        <StatIcon done={!!w.whisper?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
+        <StatIcon done={!!w.whisper?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
+        <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Complete?</span>
+        <StatIcon done={!!w.whisper?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
       </div></Card>
-    :<div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
+    :<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
     <XDiv t={t} idx={2} onTap={crossTap}/>
     {/* Workouts */}
     <SH icon="💪" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("workout")}>⚙ Setup</Btn>}>Workouts</SH>
@@ -893,16 +970,16 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
       <div style={{flex:1}}><Prog v={(w.workouts?.scott||[]).length} max={w.wkTarget} color={t.scott} h={5} label="Scott" t={t}/></div>
       <div style={{flex:1}}><Prog v={(w.workouts?.filip||[]).length} max={w.wkTarget} color={t.filip} h={5} label="Filip" t={t}/></div>
     </div>{w.wkOpts?.length>0&&<div style={{marginBottom:8,display:"flex",flexWrap:"wrap",gap:4}}>
-      {w.wkOpts.map((o: string,i: number)=><span key={i} style={{fontFamily:FB,fontSize:11,color:t.muted,padding:"2px 8px",borderRadius:6,background:t.card2}}>{o}</span>)}</div>}
+      {w.wkOpts.map((o: string,i: number)=><span key={i} style={{fontFamily:FB,fontSize:12,color:t.muted,padding:"3px 10px",borderRadius:6,background:t.card2}}>{o}</span>)}</div>}
     <button onClick={()=>setWkSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
-      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button></Card>
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button></Card>
     {/* Mileage */}
     <SH icon="🏃" t={t} right={<div style={{display:"flex",gap:4,alignItems:"center"}}>
       <button onClick={()=>setShowMiInfo(!showMiInfo)} style={{background:"none",border:"none",color:t.muted,fontSize:14,cursor:"pointer",padding:"4px"}}>ⓘ</button>
       <Btn v="ghost" sm t={t} onClick={()=>setSetupF("mileage")}>⚙ Setup</Btn></div>}>Mileage</SH>
     {showMiInfo&&<div style={{padding:"8px 12px",background:t.card2,borderRadius:8,marginBottom:8,border:`1px solid ${t.border}`}}>
-      <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.cream,marginBottom:4}}>Equivalent Mile Conversions:</div>
-      <div style={{fontFamily:FB,fontSize:11,color:t.cream2,lineHeight:1.6}}>
+      <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream,marginBottom:4}}>Equivalent Mile Conversions:</div>
+      <div style={{fontFamily:FB,fontSize:12,color:t.cream2,lineHeight:1.6}}>
         🏃 Running / Walking = 1:1<br/>🚴 Biking ÷ 3 (3 bike mi = 1 equiv)<br/>🏋️ Elliptical ÷ 2 (2 ellip mi = 1 equiv)<br/>🏊 Swimming × 3 (1 swim mi = 3 equiv)</div></div>}
     <Card t={t}><div style={{display:"flex",gap:12,marginBottom:6}}>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.scott} h={5} label="Scott (equiv)" t={t}/></div>
@@ -912,7 +989,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).filter((m: any)=>m.outdoor).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miOutMin} color={`${t.filip}88`} h={3} label="Outdoor" t={t}/></div>
     </div>
     <button onClick={()=>setMiSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
-      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>🏃 Log Mileage</button></Card>
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>🏃 Log Mileage</button></Card>
     <XDiv t={t} idx={3} onTap={crossTap}/>
     {/* Weekly Tasks */}
     {sortedTasks.length>0&&<><SH icon="📋" t={t}>Weekly Tasks</SH>
@@ -926,8 +1003,8 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
             {task.type==="xtimes"?<span style={{fontFamily:FB,fontSize:13,fontWeight:700,color:t.scott}}>{task.comp?.scott||0}/{task.target}</span>
             :<StatIcon done={!!task.comp?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>togProg(task.id,"scott")}/>}
             <div style={{textAlign:"center",flex:1,padding:"0 8px"}} onClick={()=>setEditT(task)}>
-              <div style={{fontFamily:FB,fontSize:13,fontWeight:600,color:t.cream}}>{task.name}</div>
-              {task.subtitle&&<div style={{fontFamily:FB,fontSize:11,color:t.muted}}>{task.subtitle}</div>}</div>
+              <div style={{fontFamily:FB,fontSize:15,fontWeight:600,color:t.cream}}>{task.name}</div>
+              {task.subtitle&&<div style={{fontFamily:FB,fontSize:13,color:t.muted}}>{task.subtitle}</div>}</div>
             {task.type==="xtimes"?<span style={{fontFamily:FB,fontSize:13,fontWeight:700,color:t.filip}}>{task.comp?.filip||0}/{task.target}</span>
             :<StatIcon done={!!task.comp?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>togProg(task.id,"filip")}/>}
           </div></Card>})}</>}
@@ -938,15 +1015,12 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     <div style={{marginTop:16,display:"flex",gap:8,justifyContent:"center",flexWrap:"wrap"}}>
       <Btn t={t} onClick={()=>setAddSheet(true)}>+ Add Activity</Btn>
       {wk<10&&<Btn v="secondary" t={t} onClick={()=>setPlanSheet(true)}>Plan Week {wk+1}</Btn>}</div>
-    {isWed&&<div style={{margin:"12px 0",padding:"10px 14px",background:t.goldDim,borderRadius:10,
-      border:"1px solid rgba(201,169,110,0.2)",animation:"goldPulse 3s ease infinite"}}>
-      <div style={{fontFamily:FB,fontSize:13,fontWeight:600,color:t.goldText}}>📋 New week starts tomorrow — plan now</div></div>}
     <WorkoutSheet open={wkSheet} onClose={()=>setWkSheet(false)} t={t} mutate={mutate} user={user} wk={wk} wkOpts={w.wkOpts}/>
     <MileageSheet open={miSheet} onClose={()=>setMiSheet(false)} t={t} mutate={mutate} user={user} wk={wk}/>
     <AddTaskSheet open={addSheet} onClose={()=>setAddSheet(false)} t={t} mutate={mutate} wk={wk}/>
     <EditTaskSheet open={!!editT} task={editT} onClose={()=>setEditT(null)} t={t} mutate={mutate} wk={wk}/>
     <SetupSheet open={!!setupF} field={setupF} onClose={()=>setSetupF(null)} t={t} mutate={mutate} wk={wk} wkData={w}/>
-    <PlanSheet open={planSheet} onClose={()=>setPlanSheet(false)} t={t} mutate={mutate} wk={wk} prevTasks={w.tasks}/>
+    <PlanSheet open={planSheet} onClose={()=>setPlanSheet(false)} t={t} mutate={mutate} wk={wk} prevTasks={w.tasks} D={D}/>
   </div>
 }
 
@@ -1003,38 +1077,38 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
       <div style={{flex:1}}><Prog v={calcWkPct("filip")} max={100} color={t.filip} h={5} label="Filip" t={t}/></div></div></Card>
     <XDiv t={t} idx={8} onTap={crossTap}/>
     <SH icon="📜" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("verse")}>{w.verse?.text?"Edit":"+ Set"}</Btn>}>Memory Verse</SH>
-    {w.verse?.text?<Card t={t}><div style={{fontFamily:FD,fontSize:13,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.5}}>&quot;{w.verse.text}&quot;</div>
+    {w.verse?.text?<Card t={t}><div style={{fontFamily:FD,fontSize:15,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.5}}>&quot;{w.verse.text}&quot;</div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.verse?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
-        <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Memorized?</span>
-        <StatIcon done={!!w.verse?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
-      </div></Card>:<div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,padding:"8px 0"}}>No verse set</div>}
+        <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
+        <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Memorized?</span>
+        <StatIcon done={!!w.verse?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
+      </div></Card>:<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No verse set</div>}
     <SH icon="📚" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("whisper")}>{w.whisper?.text?"Edit":"+ Set"}</Btn>}>Whisper Reading</SH>
-    {w.whisper?.text?<Card t={t}><div style={{fontFamily:FB,fontSize:13,color:t.cream2,marginBottom:8}}>{w.whisper.text}</div>
+    {w.whisper?.text?<Card t={t}><div style={{fontFamily:FB,fontSize:15,color:t.cream2,marginBottom:8}}>{w.whisper.text}</div>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.whisper?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
-        <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Complete?</span>
-        <StatIcon done={!!w.whisper?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
-      </div></Card>:<div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
+        <StatIcon done={!!w.whisper?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
+        <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Complete?</span>
+        <StatIcon done={!!w.whisper?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
+      </div></Card>:<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
     <XDiv t={t} idx={9} onTap={crossTap}/>
     <SH icon="💪" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("workout")}>⚙ Setup</Btn>}>Workouts</SH>
     <Card t={t}><div style={{display:"flex",gap:12,marginBottom:8}}>
       <div style={{flex:1}}><Prog v={(w.workouts?.scott||[]).length} max={w.wkTarget} color={t.scott} h={5} label="Scott" t={t}/></div>
       <div style={{flex:1}}><Prog v={(w.workouts?.filip||[]).length} max={w.wkTarget} color={t.filip} h={5} label="Filip" t={t}/></div></div>
     <button onClick={()=>setWkSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
-      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button></Card>
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button></Card>
     <SH icon="🏃" t={t} right={<div style={{display:"flex",gap:4,alignItems:"center"}}>
       <button onClick={()=>setShowMiInfo(!showMiInfo)} style={{background:"none",border:"none",color:t.muted,fontSize:14,cursor:"pointer",padding:"4px"}}>ⓘ</button>
       <Btn v="ghost" sm t={t} onClick={()=>setSetupF("mileage")}>⚙ Setup</Btn></div>}>Mileage</SH>
     {showMiInfo&&<div style={{padding:"8px 12px",background:t.card2,borderRadius:8,marginBottom:8,border:`1px solid ${t.border}`}}>
-      <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.cream,marginBottom:4}}>Equivalent Mile Conversions:</div>
-      <div style={{fontFamily:FB,fontSize:11,color:t.cream2,lineHeight:1.6}}>
+      <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream,marginBottom:4}}>Equivalent Mile Conversions:</div>
+      <div style={{fontFamily:FB,fontSize:12,color:t.cream2,lineHeight:1.6}}>
         🏃 Running / Walking = 1:1<br/>🚴 Biking ÷ 3 (3 bike mi = 1 equiv)<br/>🏋️ Elliptical ÷ 2 (2 ellip mi = 1 equiv)<br/>🏊 Swimming × 3 (1 swim mi = 3 equiv)</div></div>}
     <Card t={t}><div style={{display:"flex",gap:12,marginBottom:8}}>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.scott} h={5} label="Scott" t={t}/></div>
       <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.filip} h={5} label="Filip" t={t}/></div></div>
     <button onClick={()=>setMiSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
-      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>🏃 Log Mileage</button></Card>
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>🏃 Log Mileage</button></Card>
     <XDiv t={t} idx={10} onTap={crossTap}/>
     {sortedTasks.length>0&&<><SH icon="📋" t={t}>Weekly Tasks</SH>
       {sortedTasks.map((task: any)=><TaskRow key={task.id} task={task} user={user} t={t} dayNum={dn(today())} wk={wk}
@@ -1051,7 +1125,7 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
     <AddTaskSheet open={addSheet} onClose={()=>setAddSheet(false)} t={t} mutate={mutate} wk={wk}/>
     <EditTaskSheet open={!!editT} task={editT} onClose={()=>setEditT(null)} t={t} mutate={mutate} wk={wk}/>
     <SetupSheet open={!!setupF} field={setupF} onClose={()=>setSetupF(null)} t={t} mutate={mutate} wk={wk} wkData={w}/>
-    <PlanSheet open={planSheet} onClose={()=>setPlanSheet(false)} t={t} mutate={mutate} wk={wk} prevTasks={w.tasks}/>
+    <PlanSheet open={planSheet} onClose={()=>setPlanSheet(false)} t={t} mutate={mutate} wk={wk} prevTasks={w.tasks} D={D}/>
   </div>
 }
 
@@ -1083,7 +1157,7 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
     <SH icon="🛡️" t={t}>Strikes</SH>
     <Card t={t}><div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
       {["scott","filip"].map(who=><div key={who} style={{textAlign:"center",flex:1}}>
-        <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t[who],marginBottom:6}}>{who.toUpperCase()}</div>
+        <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[who],marginBottom:6}}>{who.toUpperCase()}</div>
         <div style={{display:"flex",gap:3,justifyContent:"center",marginBottom:6}}>
           {Array.from({length:Math.max(4,D.strikes?.[who]||0)}).map((_,i)=><Shield key={i} on={i<(D.strikes?.[who]||0)} s={18} t={t}/>)}</div>
         {user===who&&<div style={{display:"flex",gap:4,justifyContent:"center"}}>
@@ -1093,7 +1167,7 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
     <XDiv t={t} idx={4} onTap={crossTap}/>
     {/* Bible Bookshelf */}
     <SH icon="📖" t={t}>Bible Reading Progress</SH>
-    <Card t={t}><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:10}}>{chapDone}/{BIBLE.length-2} chapters complete</div>
+    <Card t={t}><div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:10}}>{chapDone}/{BIBLE.length-2} chapters complete</div>
       <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(70px,1fr))",gap:6}}>
         {BOOKS.map((book,bi)=>{let bd=0;for(let c=0;c<book.ch;c++){const di=book.s+c;const s2=ds(d4d(di));if(D.daily?.[s2]?.bible?.[user])bd++}
           const pct=book.ch>0?bd/book.ch:0;const done=pct>=1
@@ -1121,16 +1195,16 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
     {(["physical","spiritual","relational","intellectual"] as const).map(area=>{
       const icons: Record<string,string>={physical:"💪",spiritual:"🙏",relational:"🤝",intellectual:"🧠"}
       return <Card key={area} t={t} style={{marginBottom:10}}>
-        <div style={{fontFamily:FD,fontSize:14,fontWeight:600,color:t.cream,marginBottom:8}}>{icons[area]} {area[0].toUpperCase()+area.slice(1)}</div>
+        <div style={{fontFamily:FD,fontSize:16,fontWeight:600,color:t.cream,marginBottom:8}}>{icons[area]} {area[0].toUpperCase()+area.slice(1)}</div>
         <div style={{display:"flex",gap:8,marginBottom:8}}>
           {["scott","filip"].map(who=><div key={who} style={{flex:1}}>
-            <div style={{fontFamily:FB,fontSize:10,fontWeight:700,color:t[who],marginBottom:3}}>{who.toUpperCase()}</div>
+            <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[who],marginBottom:3}}>{who.toUpperCase()}</div>
             {user===who?<TA value={D.growth?.[area]?.[who]||""} onChange={(v: string)=>updateGrowth(area,who,v)} placeholder="Your commitment..." t={t} rows={2}/>
-            :<div style={{fontFamily:FB,fontSize:12,color:t.cream2,padding:6,background:t.card2,borderRadius:8,minHeight:40}}>
+            :<div style={{fontFamily:FB,fontSize:14,color:t.cream2,padding:8,background:t.card2,borderRadius:8,minHeight:40}}>
               {D.growth?.[area]?.[who]||<span style={{color:t.mutedDark}}>Not set</span>}</div>}
           </div>)}</div>
         {(D.growth?.[area]?.comments||[]).length>0&&<div style={{borderTop:`1px solid ${t.border}`,paddingTop:6,marginTop:4}}>
-          {D.growth[area].comments.map((c: any,ci: number)=><div key={ci} style={{fontFamily:FB,fontSize:11,color:t.cream2,marginBottom:4}}>
+          {D.growth[area].comments.map((c: any,ci: number)=><div key={ci} style={{fontFamily:FB,fontSize:13,color:t.cream2,marginBottom:4}}>
             <span style={{color:t[c.user],fontWeight:700}}>{c.user==="scott"?"Scott":"Filip"}</span>
             <span style={{color:t.mutedDark}}> · {c.date}</span>: {c.text}</div>)}</div>}
         {cArea===area?<div style={{marginTop:6,display:"flex",gap:6}}>
@@ -1142,17 +1216,17 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
     <SH icon="🔥" t={t}>Giving Up</SH>
     <Card t={t}><div style={{display:"flex",gap:8}}>
       {["scott","filip"].map(who=><div key={who} style={{flex:1}}>
-        <div style={{fontFamily:FB,fontSize:10,fontWeight:700,color:t[who],marginBottom:3}}>{who.toUpperCase()}</div>
+        <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[who],marginBottom:3}}>{who.toUpperCase()}</div>
         {user===who?<TA value={D.giving?.[who]||""} onChange={updateGiving} placeholder="What are you giving up?" t={t} rows={2}/>
-        :<div style={{fontFamily:FB,fontSize:12,color:t.cream2,padding:6,background:t.card2,borderRadius:8,minHeight:40}}>
+        :<div style={{fontFamily:FB,fontSize:14,color:t.cream2,padding:8,background:t.card2,borderRadius:8,minHeight:40}}>
           {D.giving?.[who]||<span style={{color:t.mutedDark}}>Not set</span>}</div>}
       </div>)}</div></Card>
     <XDiv t={t} idx={7} onTap={crossTap}/>
     <SH icon="📅" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setEvtSheet(true)}>+ Add</Btn>}>Special Events</SH>
     {(D.events||[]).map((evt: any)=><Card key={evt.id} t={t} style={{borderLeft:`3px solid ${t.gold}`}}>
-      <div style={{fontFamily:FD,fontSize:15,fontWeight:600,color:t.cream,marginBottom:4}}>{evt.title}</div>
-      <div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:2}}>{evt.date} · {evt.time}</div>
-      <div style={{fontFamily:FB,fontSize:12,color:t.mutedDark,marginBottom:8}}>📍 {evt.loc}</div>
+      <div style={{fontFamily:FD,fontSize:17,fontWeight:600,color:t.cream,marginBottom:4}}>{evt.title}</div>
+      <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:3}}>{evt.date} · {evt.time}</div>
+      <div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,marginBottom:8}}>📍 {evt.loc}</div>
       <div style={{display:"flex",gap:8,marginTop:4}}>
         {["scott","filip"].map(who=>{const attending=!!evt[who];const isMe=user===who
           return <button key={who} onClick={()=>isMe&&toggleEvt(evt.id)} disabled={!isMe}
@@ -1199,27 +1273,27 @@ function HistoryTab({D,mutate,t,brave,onBrave}: any) {
       <div style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>Next milestone: {next}</div></Card>
     <div style={{display:"flex",gap:4,marginBottom:8,flexWrap:"wrap"}}>
       {[{v:"all",l:"All"},{v:"scott",l:"Scott"},{v:"filip",l:"Filip"}].map(f=>
-        <button key={f.v} onClick={()=>setFilter(f.v)} style={{padding:"5px 12px",borderRadius:8,fontFamily:FB,fontSize:11,fontWeight:600,cursor:"pointer",
+        <button key={f.v} onClick={()=>setFilter(f.v)} style={{padding:"6px 14px",borderRadius:8,fontFamily:FB,fontSize:12,fontWeight:600,cursor:"pointer",
           border:`1.5px solid ${filter===f.v?t.gold:t.borderMed}`,background:filter===f.v?t.goldDim:"transparent",color:filter===f.v?t.goldText:t.muted}}>{f.l}</button>)}
       <span style={{width:1,height:20,background:t.border,margin:"0 2px"}}/>
       {[{v:"all",l:"All types"},{v:"complete",l:"Completed"},{v:"workout",l:"Workouts"},{v:"edit",l:"Edits"}].map(f=>
-        <button key={f.v} onClick={()=>setTypeF(f.v)} style={{padding:"5px 12px",borderRadius:8,fontFamily:FB,fontSize:11,fontWeight:600,cursor:"pointer",
+        <button key={f.v} onClick={()=>setTypeF(f.v)} style={{padding:"6px 14px",borderRadius:8,fontFamily:FB,fontSize:12,fontWeight:600,cursor:"pointer",
           border:`1.5px solid ${typeF===f.v?t.gold:t.borderMed}`,background:typeF===f.v?t.goldDim:"transparent",color:typeF===f.v?t.goldText:t.muted}}>{f.l}</button>)}</div>
     <div style={{display:"flex",gap:4,marginBottom:12,flexWrap:"wrap"}}>
-      <button onClick={()=>setWkF("all")} style={{padding:"5px 12px",borderRadius:8,fontFamily:FB,fontSize:11,fontWeight:600,cursor:"pointer",
+      <button onClick={()=>setWkF("all")} style={{padding:"6px 14px",borderRadius:8,fontFamily:FB,fontSize:12,fontWeight:600,cursor:"pointer",
         border:`1.5px solid ${wkF==="all"?t.gold:t.borderMed}`,background:wkF==="all"?t.goldDim:"transparent",color:wkF==="all"?t.goldText:t.muted}}>All weeks</button>
       {Array.from({length:10}).map((_,i)=><button key={i} onClick={()=>setWkF(String(i+1))}
-        style={{padding:"5px 8px",borderRadius:8,fontFamily:FB,fontSize:11,fontWeight:600,cursor:"pointer",minWidth:28,
+        style={{padding:"6px 10px",borderRadius:8,fontFamily:FB,fontSize:12,fontWeight:600,cursor:"pointer",minWidth:28,
           border:`1.5px solid ${wkF===String(i+1)?t.gold:t.borderMed}`,background:wkF===String(i+1)?t.goldDim:"transparent",
           color:wkF===String(i+1)?t.goldText:t.muted}}>{i+1}</button>)}</div>
     {log.length===0&&<div style={{textAlign:"center",padding:30}}><div style={{fontSize:24,marginBottom:8}}>📜</div>
       <div style={{fontFamily:FB,fontSize:14,color:t.mutedDark}}>No activity yet</div></div>}
-    {log.slice(0,80).map((entry: any,i: number)=><div key={i} style={{display:"flex",gap:10,padding:"8px 0",borderBottom:`1px solid ${t.border}`}}>
-      <div style={{width:28,height:28,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
-        background:entry.type==="complete"?t.greenDim:entry.type==="strike"?"rgba(196,90,72,0.1)":t.goldDim,fontSize:13,flexShrink:0}}>
+    {log.slice(0,80).map((entry: any,i: number)=><div key={i} style={{display:"flex",gap:10,padding:"10px 0",borderBottom:`1px solid ${t.border}`}}>
+      <div style={{width:32,height:32,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
+        background:entry.type==="complete"?t.greenDim:entry.type==="strike"?"rgba(196,90,72,0.1)":t.goldDim,fontSize:15,flexShrink:0}}>
         {icons[entry.type]||"•"}</div>
       <div style={{flex:1}}>
-        <div style={{fontFamily:FB,fontSize:13,color:t.cream}}>
+        <div style={{fontFamily:FB,fontSize:14,color:t.cream}}>
           {entry.user&&<span style={{color:t[entry.user],fontWeight:700}}>{entry.user==="scott"?"Scott":"Filip"} </span>}
           {entry.type==="complete"&&<>completed <strong>{entry.task}</strong></>}
           {entry.type==="workout"&&<>logged workout: {entry.detail}</>}
@@ -1229,7 +1303,7 @@ function HistoryTab({D,mutate,t,brave,onBrave}: any) {
           {entry.type==="edit"&&<>{entry.detail}</>}
           {entry.type==="addTask"&&<>added task: {entry.detail}</>}
         </div>
-        <div style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>{entry.date} · {new Date(entry.time).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>
+        <div style={{fontFamily:FB,fontSize:11,color:t.mutedDark}}>{entry.date} · {new Date(entry.time).toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'})}</div>
       </div></div>)}
     </div>
   </div>
@@ -1301,16 +1375,16 @@ export default function FC30App() {
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:18}}>⚔️</span>
-          <div><h1 style={{fontFamily:FD,fontSize:16,color:t.cream,margin:0,lineHeight:1}}>
+          <div><h1 style={{fontFamily:FD,fontSize:18,color:t.cream,margin:0,lineHeight:1}}>
             {brave?"BRAVEHEART":"Hold the Line"}</h1>
-          <div style={{fontFamily:FB,fontSize:10,color:t.muted}}>{brave?"They may take our lives...":"Chapter 30 — Nehemiah 4:14"}</div></div></div>
+          <div style={{fontFamily:FB,fontSize:11,color:t.muted}}>{brave?"They may take our lives...":"Chapter 30 — Nehemiah 4:14"}</div></div></div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <div style={{display:"flex",gap:1}}>{Array.from({length:4}).map((_,i)=><Shield key={i} on={i<(D.strikes?.[user]||0)} s={10} t={t}/>)}</div>
           <button onClick={()=>{if(brave){toggleBrave();return}setLocal({theme:D.theme==="dark"?"light":"dark"})}}
             style={{background:"none",border:"none",color:t.muted,fontSize:16,cursor:"pointer",padding:4}}>{D.theme==="dark"?"☀️":"🌙"}</button>
           <button onClick={()=>setLocal({user:user==="scott"?"filip":"scott"})}
-            style={{fontFamily:FB,fontSize:10,fontWeight:700,color:t[user],background:t.card2,border:`1px solid ${t.borderMed}`,
-              borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>{user.toUpperCase()} ↔</button>
+            style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t[user],background:t.card2,border:`1px solid ${t.borderMed}`,
+              borderRadius:8,padding:"5px 10px",cursor:"pointer"}}>{user.toUpperCase()} ↔</button>
         </div></div></div>
     {/* Content */}
     <div style={{padding:"12px 16px"}}>
@@ -1328,8 +1402,8 @@ export default function FC30App() {
         {id:"growth",icon:"🌱",label:"Growth"},{id:"history",icon:"📜",label:"History"}].map(tb=>
         <button key={tb.id} onClick={()=>setTab(tb.id)}
           style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"8px 0",textAlign:"center"}}>
-          <div style={{fontSize:18,marginBottom:2,opacity:tab===tb.id?1:.5}}>{tb.icon}</div>
-          <div style={{fontFamily:FB,fontSize:10,fontWeight:tab===tb.id?700:400,color:tab===tb.id?t.gold:t.muted}}>{tb.label}</div>
+          <div style={{fontSize:20,marginBottom:2,opacity:tab===tb.id?1:.5}}>{tb.icon}</div>
+          <div style={{fontFamily:FB,fontSize:11,fontWeight:tab===tb.id?700:400,color:tab===tb.id?t.gold:t.muted}}>{tb.label}</div>
         </button>)}</div>
   </div>
 }
