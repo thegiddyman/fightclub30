@@ -999,7 +999,11 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     <XDiv t={t} idx={1} onTap={crossTap}/>
     {/* Verse */}
     <SH icon="📜" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("verse")}>{w.verse?.text?"Edit":"+ Set"}</Btn>}>Memory Verse</SH>
-    {w.verse?.text?<Card t={t}><div style={{fontFamily:FD,fontSize:15,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.5}}>&quot;{w.verse.text}&quot;</div>
+    {w.verse?.text?<Card t={t}>
+      <div style={{fontFamily:FD,fontSize:14,fontWeight:700,color:t.goldText,marginBottom:4}}>{w.verse.text}</div>
+      {w.verse.fullText&&<div style={{fontFamily:FB,fontSize:14,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.6,
+        padding:"8px 12px",background:`${t.gold}08`,borderRadius:8,borderLeft:`3px solid ${t.gold}44`}}>&ldquo;{w.verse.fullText}&rdquo;</div>}
+      {!w.verse.fullText&&<div style={{fontFamily:FB,fontSize:12,color:t.mutedDark,marginBottom:8}}>Full verse text not added yet — add in Verse tab for practice</div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
         <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Memorized?</span>
@@ -1129,7 +1133,11 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
       <div style={{flex:1}}><Prog v={calcWkPct("filip")} max={100} color={t.filip} h={5} label="Filip" t={t}/></div></div></Card>
     <XDiv t={t} idx={8} onTap={crossTap}/>
     <SH icon="📜" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("verse")}>{w.verse?.text?"Edit":"+ Set"}</Btn>}>Memory Verse</SH>
-    {w.verse?.text?<Card t={t}><div style={{fontFamily:FD,fontSize:15,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.5}}>&quot;{w.verse.text}&quot;</div>
+    {w.verse?.text?<Card t={t}>
+      <div style={{fontFamily:FD,fontSize:14,fontWeight:700,color:t.goldText,marginBottom:4}}>{w.verse.text}</div>
+      {w.verse.fullText&&<div style={{fontFamily:FB,fontSize:14,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.6,
+        padding:"8px 12px",background:`${t.gold}08`,borderRadius:8,borderLeft:`3px solid ${t.gold}44`}}>&ldquo;{w.verse.fullText}&rdquo;</div>}
+      {!w.verse.fullText&&<div style={{fontFamily:FB,fontSize:12,color:t.mutedDark,marginBottom:8}}>Add full verse text in Verse tab for practice</div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
         <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Memorized?</span>
@@ -1198,7 +1206,9 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
   const updateGrowth=(area: string,field: string,val: string)=>mutate((nd: any)=>{
     nd.growth={...nd.growth};nd.growth[area]={...nd.growth[area],[field]:val};return nd})
   const updateGiving=(val: string)=>mutate((nd: any)=>{nd.giving={...nd.giving,[user]:val};return nd})
-  const toggleEvt=(id: string)=>{mutate((nd: any)=>{nd.events=nd.events.map((e: any)=>e.id===id?{...e,[user]:!e[user]}:e);return nd})}
+  const toggleEvt=(id: string)=>{mutate((nd: any)=>{nd.events=nd.events.map((e: any)=>{
+    if(e.id!==id)return e; const cur=e[user]; const next=!cur?"going":cur==="going"?"not_going":undefined
+    return {...e,[user]:next}});return nd})}
   const addEvt=()=>{if(!newEvt.title)return;mutate((nd: any)=>{
     nd.events=[...nd.events,{id:`e_${Date.now()}`,...newEvt,scott:false,filip:false}];return nd})
     setNewEvt({title:"",loc:"",date:"",time:""});setEvtSheet(false)}
@@ -1282,13 +1292,16 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
       <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:3}}>{evt.date} · {evt.time}</div>
       <div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,marginBottom:8}}>📍 {evt.loc}</div>
       <div style={{display:"flex",gap:8,marginTop:4}}>
-        {["scott","filip"].map(who=>{const attending=!!evt[who];const isMe=user===who
+        {["scott","filip"].map(who=>{const status=evt[who];const isMe=user===who
+          const isGoing=status==="going"; const isNotGoing=status==="not_going"
+          // Support legacy boolean true = "going"
+          const going = isGoing || status===true
           return <button key={who} onClick={()=>isMe&&toggleEvt(evt.id)} disabled={!isMe}
             style={{flex:1,padding:"10px 0",borderRadius:10,cursor:isMe?"pointer":"default",
-              border:`1.5px solid ${attending?t[who]:t.borderMed}`,
-              background:attending?`${t[who]}22`:"transparent",opacity:isMe?1:0.7,
-              fontFamily:FB,fontSize:13,fontWeight:700,color:attending?t[who]:t.muted}}>
-            {attending?"✓ ":"○ "}{who==="scott"?"Scott":"Filip"}{attending?" — Going":" — Not set"}
+              border:`1.5px solid ${going?t[who]:isNotGoing?t.red+"88":t.borderMed}`,
+              background:going?`${t[who]}22`:isNotGoing?"rgba(212,80,80,0.08)":"transparent",opacity:isMe?1:0.7,
+              fontFamily:FB,fontSize:13,fontWeight:700,color:going?t[who]:isNotGoing?t.red:t.muted}}>
+            {going?"✓ ":isNotGoing?"✗ ":"○ "}{who==="scott"?"Scott":"Filip"}{going?" — Going":isNotGoing?" — Not Going":" — Not set"}
           </button>})}</div></Card>)}
     <BSheet open={evtSheet} onClose={()=>setEvtSheet(false)} title="Add Event" t={t}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
@@ -1365,10 +1378,10 @@ function HistoryTab({D,mutate,t,brave,onBrave}: any) {
 // ═══════════════════════════════════════════════════════════════
 // MEMORY VERSE PRACTICE
 // ═══════════════════════════════════════════════════════════════
-const parseWords = (text: string): {word:string,punct:string}[] => {
+const parseWords = (text: string): {word:string,pre:string,punct:string}[] => {
   return text.split(/\s+/).filter(Boolean).map(w => {
-    const m = w.match(/^([\w''-]+)([^a-zA-Z0-9]*)$/)
-    return m ? {word:m[1],punct:m[2]} : {word:w,punct:""}
+    const m = w.match(/^([^a-zA-Z0-9]*)([\w''\u2019-]+)([^a-zA-Z0-9]*)$/)
+    return m ? {pre:m[1],word:m[2],punct:m[3]} : {pre:"",word:w.replace(/[^a-zA-Z0-9''\u2019-]/g,"") || w,punct:""}
   })
 }
 const levenshtein = (a: string, b: string): number => {
@@ -1441,15 +1454,16 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
   // Type-it-out comparison
   const typeResults = useMemo(()=>{
     if(!typeChecked || !typed.trim()) return null
+    const normalize = (s: string) => s.toLowerCase().replace(/[\u2018\u2019\u201C\u201D''""]/g,"'").replace(/[^a-z0-9'-]/g,"").replace(/\.{2,}/g,"")
     const typedWords = typed.trim().split(/\s+/)
     const expected = words.map(w=>w.word)
     const results: {expected:string,got:string,status:"correct"|"typo"|"wrong"|"missing"|"extra"}[] = []
     let ei=0, ti=0
     while(ei<expected.length || ti<typedWords.length){
       if(ei<expected.length && ti<typedWords.length){
-        if(expected[ei].toLowerCase()===typedWords[ti].toLowerCase().replace(/[^a-zA-Z0-9'-]/g,"")){
+        if(normalize(expected[ei])===normalize(typedWords[ti])){
           results.push({expected:expected[ei],got:typedWords[ti],status:"correct"}); ei++; ti++
-        } else if(levenshtein(expected[ei].toLowerCase(),typedWords[ti].toLowerCase().replace(/[^a-zA-Z0-9'-]/g,""))<=2){
+        } else if(levenshtein(normalize(expected[ei]),normalize(typedWords[ti]))<=2){
           results.push({expected:expected[ei],got:typedWords[ti],status:"typo"}); ei++; ti++
         } else { results.push({expected:expected[ei],got:typedWords[ti],status:"wrong"}); ei++; ti++ }
       } else if(ei<expected.length){ results.push({expected:expected[ei],got:"",status:"missing"}); ei++ }
@@ -1510,7 +1524,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
         <Card t={t} style={{padding:20}}>
           <div style={{fontFamily:FD,fontSize:18,color:t.cream,lineHeight:1.7,textAlign:"center"}}>
             {words.map((w,i)=>{const hidden=(hiddenAt[stage]||[]).includes(i)
-              return <span key={i}>{hidden?<span style={{display:"inline-block",minWidth:w.word.length*9,borderBottom:`2px solid ${t.borderMed}`,
+              return <span key={i}>{w.pre}{hidden?<span style={{display:"inline-block",minWidth:w.word.length*9,borderBottom:`2px solid ${t.borderMed}`,
                 margin:"0 2px"}}>&nbsp;</span>:<span>{w.word}</span>}{w.punct}<span> </span></span>})}
           </div>
         </Card>
@@ -1528,8 +1542,8 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
           {flShow?"Full verse shown — study it":"Each word reduced to its first letter"}</div>
         <Card t={t} style={{padding:20}}>
           <div style={{fontFamily:flShow?FD:"monospace",fontSize:flShow?18:20,color:t.cream,lineHeight:1.8,textAlign:"center",letterSpacing:flShow?0:2}}>
-            {flShow?words.map((w,i)=><span key={i}>{w.word}{w.punct} </span>)
-            :words.map((w,i)=><span key={i}><span style={{color:t.goldText,fontWeight:700}}>{w.word[0]}</span><span style={{color:t.mutedDark}}>.</span>{w.punct} </span>)}
+            {flShow?words.map((w,i)=><span key={i}>{w.pre}{w.word}{w.punct} </span>)
+            :words.map((w,i)=><span key={i}>{w.pre}<span style={{color:t.goldText,fontWeight:700}}>{w.word[0].toUpperCase()}</span><span style={{color:t.mutedDark}}>.</span>{w.punct} </span>)}
           </div>
         </Card>
         <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
@@ -1545,10 +1559,10 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
           <div style={{fontFamily:FD,fontSize:16,color:t.cream,lineHeight:2,textAlign:"center"}}>
             {words.map((w,i)=>{
               const blankIdx = fbData.blanks.indexOf(i)
-              if(blankIdx===-1) return <span key={i}>{w.word}{w.punct} </span>
+              if(blankIdx===-1) return <span key={i}>{w.pre}{w.word}{w.punct} </span>
               const ans = fbAns[i]
               const isCorrect = fbChecked ? fbCorrect[i] : null
-              return <span key={i}><button onClick={()=>{if(fbChecked)return;if(ans){const na={...fbAns};delete na[i];setFbAns(na)}else setFbSel(i)}}
+              return <span key={i}>{w.pre}<button onClick={()=>{if(fbChecked)return;if(ans){const na={...fbAns};delete na[i];setFbAns(na)}else setFbSel(i)}}
                 style={{display:"inline-block",minWidth:50,padding:"2px 8px",margin:"0 2px",borderRadius:6,cursor:"pointer",
                   border:`2px ${fbSel===i?"dashed":"solid"} ${isCorrect===true?t.green:isCorrect===false?t.red:fbSel===i?t.gold:t.borderMed}`,
                   background:isCorrect===true?t.greenDim:isCorrect===false?"rgba(212,80,80,0.15)":ans?t.goldDim:"transparent",
@@ -1568,7 +1582,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
             <Btn v="secondary" t={t} onClick={()=>{setFbAns({});setFbSel(null);setFbChecked(false);setFbCorrect({})}}>Reset</Btn>
             <Btn t={t} disabled={Object.keys(fbAns).length<fbData.blanks.length} onClick={()=>{
               const corr: Record<number,boolean>={}; let allRight=true
-              fbData.blanks.forEach(idx=>{const ok=fbAns[idx]?.toLowerCase()===words[idx].word.toLowerCase();corr[idx]=ok;if(!ok)allRight=false})
+              fbData.blanks.forEach(idx=>{const ok=fbAns[idx]?.toLowerCase().replace(/[^a-z0-9'-]/g,"")===words[idx].word.toLowerCase().replace(/[^a-z0-9'-]/g,"");corr[idx]=ok;if(!ok)allRight=false})
               setFbCorrect(corr);setFbChecked(true)
               if(allRight) onMasteryUpdate(weekNum,"fillBlank")
             }}>Check Answers</Btn></>
