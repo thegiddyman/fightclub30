@@ -80,7 +80,7 @@ const WEEK1_TASKS = [
 ]
 
 const initWk1 = (): any => ({
-  verse:{text:"Exodus 20:6",scott:false,filip:false},
+  verse:{text:"Exodus 20:6",fullText:"showing steadfast love to thousands of those who love me and keep my commandments",scott:false,filip:false},
   whisper:{text:"Chapter 1 — Whisper",scott:false,filip:false},
   wkOpts:["Full body (arms/chest/abs/legs)","40 pushups, 3min plank, 50 squats"],
   wkTarget:3,miTarget:6,miOutMin:4,
@@ -89,12 +89,31 @@ const initWk1 = (): any => ({
 })
 
 const DEFAULT_DATA = (): any => ({user:null,theme:"dark",brave:false,strikes:{scott:4,filip:4},streaks:{scott:0,filip:0},
-  total:0,crossTaps:{},daily:{},weeks:{},progTasks:[],
+  total:0,crossTaps:{},daily:{},weeks:{},progTasks:[],verseMastery:{},
   growth:{physical:{scott:"",filip:"",comments:[]},spiritual:{scott:"",filip:"",comments:[]},
     relational:{scott:"",filip:"",comments:[]},intellectual:{scott:"",filip:"",comments:[]}},
   giving:{scott:"",filip:""},events:[...EVENTS_INIT],log:[]})
 
-const gw = (d: any, w: number) => { if(!d.weeks[w]) d.weeks[w] = w===1?initWk1():initWk(); return d.weeks[w] }
+const gw = (d: any, w: number) => {
+  if(!d.weeks[w]) {
+    if(w===1) { d.weeks[w] = initWk1() }
+    else {
+      d.weeks[w] = initWk()
+      // Carry forward workout options and targets from the most recent configured week
+      for(let pw = w - 1; pw >= 1; pw--) {
+        const prev = d.weeks[pw]
+        if(prev && (prev.wkOpts?.length > 0 || prev.wkTarget > 0)) {
+          d.weeks[w].wkOpts = [...(prev.wkOpts || [])]
+          d.weeks[w].wkTarget = prev.wkTarget || 3
+          d.weeks[w].miTarget = prev.miTarget || 10
+          d.weeks[w].miOutMin = prev.miOutMin || 5
+          break
+        }
+      }
+    }
+  }
+  return d.weeks[w]
+}
 const gd = (d: any, ds2: string) => { if(!d.daily[ds2]) d.daily[ds2] = {bible:{scott:false,filip:false},devotional:{scott:false,filip:false},journal:{scott:false,filip:false}}; return d.daily[ds2] }
 const addLog = (d: any, entry: any) => { d.log = [{...entry,time:new Date().toISOString()},...(d.log||[]).slice(0,500)] }
 const removeLog = (d: any, user: string, task: string) => { const idx = (d.log||[]).findIndex((e: any) => e.type==="complete" && e.user===user && e.task===task); if(idx>=0) d.log.splice(idx,1) }
@@ -123,10 +142,18 @@ async function mergeWrite(mutateFn: (current: any) => any): Promise<any> {
   return updated
 }
 
+// Local-only fields: stored in browser localStorage, never in Supabase
+const getLocalUser = (): string | null => { try { return localStorage.getItem("fc30_user") } catch { return null } }
+const setLocalUser = (u: string) => { try { localStorage.setItem("fc30_user", u) } catch {} }
+const getLocalTheme = (): string => { try { return localStorage.getItem("fc30_theme") || "dark" } catch { return "dark" } }
+const setLocalTheme = (th: string) => { try { localStorage.setItem("fc30_theme", th) } catch {} }
+
 // Custom hook: manages state + real-time subscription
 function useFC30() {
   const [D, setD] = useState<any>(null)
   const [loading, setLoading] = useState(true)
+  const [user, setUserState] = useState<string | null>(getLocalUser)
+  const [theme, setThemeState] = useState<string>(getLocalTheme)
   const skipNextRT = useRef(false)
 
   // Initial load
@@ -144,13 +171,7 @@ function useFC30() {
         (payload) => {
           if (skipNextRT.current) { skipNextRT.current = false; return }
           const newData = payload.new?.data
-          if (newData && typeof newData === "object") {
-            setD((prev: any) => {
-              // Preserve local-only fields (user selection, theme) if not in payload
-              if (!prev) return newData
-              return { ...newData, user: prev.user, theme: prev.theme || newData.theme }
-            })
-          }
+          if (newData && typeof newData === "object") setD(newData)
         }
       )
       .subscribe()
@@ -161,30 +182,17 @@ function useFC30() {
   // Merge-safe mutate: applies a mutation against latest DB state
   const mutate = useCallback(async (mutateFn: (current: any) => any) => {
     skipNextRT.current = true
-    const updated = await mergeWrite((current) => {
-      // Preserve the local user selection in the mutation
-      const localUser = D?.user
-      const localTheme = D?.theme
-      const result = mutateFn(current)
-      // Don't overwrite user/theme from remote state
-      if (localUser) result.user = localUser
-      if (localTheme) result.theme = localTheme
-      return result
-    })
+    const updated = await mergeWrite(mutateFn)
     setD(updated)
-  }, [D?.user, D?.theme])
-
-  // Local-only update (user selection, theme — no need to merge)
-  const setLocal = useCallback(async (updates: Partial<any>) => {
-    setD((prev: any) => {
-      const next = { ...prev, ...updates }
-      // Still save to DB so state persists across refreshes
-      supabase.from("app_data").update({ data: next, updated_at: new Date().toISOString() }).eq("id", ROW_ID)
-      return next
-    })
   }, [])
 
-  return { D, loading, mutate, setLocal }
+  // Set user (localStorage only)
+  const setUser = useCallback((u: string) => { setUserState(u); setLocalUser(u) }, [])
+
+  // Set theme (localStorage only)
+  const setTheme = useCallback((th: string) => { setThemeState(th); setLocalTheme(th) }, [])
+
+  return { D, loading, mutate, user, theme, setUser, setTheme }
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -221,18 +229,35 @@ function Prog({v,max,color,h=5,label,t}: {v:number,max:number,color:string,h?:nu
 function StatIcon({done,sz=28,tap,onTap,t}: {done:boolean,sz?:number,tap?:boolean,onTap?:()=>void,t:any}) {
   const [burst,setBurst] = useState(false)
   const go = () => { if(!tap) return; if(!done) setBurst(true); onTap?.() }
-  useEffect(() => { if(burst){ const x = setTimeout(()=>setBurst(false),800); return ()=>clearTimeout(x) } }, [burst])
+  useEffect(() => { if(burst){ const x = setTimeout(()=>setBurst(false),1200); return ()=>clearTimeout(x) } }, [burst])
+  // Generate 16 particles in a radial pattern with varied distances
+  const particles = Array.from({length:16},(_,i)=>{
+    const angle = (i/16)*Math.PI*2 + (i%2?0.2:-0.2)
+    const dist = 18 + (i%3)*8 + (i%2)*4
+    const x = Math.cos(angle)*dist, y = Math.sin(angle)*dist
+    const size = i%3===0?5:i%2?4:3
+    const colors = [t.greenBright,t.goldBright,t.gold,"#fff",t.greenBright,t.goldBright]
+    return {x,y,size,color:colors[i%colors.length],delay:i%4*0.03}
+  })
   return <div style={{position:"relative",width:sz,height:sz,cursor:tap?"pointer":"default"}} onClick={go}>
-    {burst&&<div style={{position:"absolute",inset:-4,borderRadius:12,border:`2.5px solid ${t.green}`,animation:"celRing 0.7s ease forwards",pointerEvents:"none"}}/>}
-    {burst&&<div style={{position:"absolute",inset:-6,borderRadius:14,background:t.greenGlow,animation:"celRing 0.7s ease forwards",pointerEvents:"none"}}/>}
-    {burst&&[0,1,2,3,4,5,6,7].map(i=><div key={i} style={{position:"absolute",top:"50%",left:"50%",width:4,height:4,borderRadius:3,
-      background:i%2?t.greenBright:t.goldBright,animation:`p${i%4} 0.7s ease forwards`,pointerEvents:"none"}}/>)}
+    {burst&&<div style={{position:"absolute",inset:-6,borderRadius:14,border:`2.5px solid ${t.green}`,animation:"celRing 0.9s ease forwards",pointerEvents:"none"}}/>}
+    {burst&&<div style={{position:"absolute",inset:-10,borderRadius:18,border:`1.5px solid ${t.goldBright}`,animation:"celRing2 1s ease forwards",pointerEvents:"none"}}/>}
+    {burst&&<div style={{position:"absolute",inset:-4,borderRadius:12,background:t.greenGlow,animation:"celGlow 0.8s ease forwards",pointerEvents:"none"}}/>}
+    {burst&&particles.map((p,i)=><div key={i} style={{position:"absolute",top:"50%",left:"50%",
+      width:p.size,height:p.size,borderRadius:p.size,background:p.color,pointerEvents:"none",
+      animation:`particleFly 0.9s ${p.delay}s cubic-bezier(0.25,0.46,0.45,0.94) forwards`,
+      "--px":`${p.x}px`,"--py":`${p.y}px`} as any}/>)}
+    {burst&&[0,1,2,3].map(i=><div key={`spark${i}`} style={{position:"absolute",top:"50%",left:"50%",
+      width:2,height:8,borderRadius:1,background:t.goldBright,pointerEvents:"none",
+      transform:`translate(-50%,-50%) rotate(${i*90+45}deg)`,
+      animation:`sparkFly${i} 0.7s ease forwards`}}/>)}
     <div style={{width:sz,height:sz,borderRadius:8,display:"flex",alignItems:"center",justifyContent:"center",
       background:done?t.greenDim:tap?t.card2:"rgba(100,100,120,0.06)",
       border:`1.5px solid ${done?t.greenBright:tap?t.borderLight:"rgba(100,100,120,0.15)"}`,
-      transform:burst?"scale(1.15)":"scale(1)",transition:"all 0.25s cubic-bezier(0.34,1.56,0.64,1)",
-      boxShadow:done?`0 0 8px ${t.greenGlow}`:"none"}}>
-      <span style={{fontSize:sz*.5,fontWeight:700,color:done?t.greenBright:tap?t.muted:t.mutedDark}}>{done?"✓":"○"}</span></div></div>
+      transform:burst?"scale(1.2)":"scale(1)",transition:"all 0.3s cubic-bezier(0.34,1.56,0.64,1)",
+      boxShadow:done?`0 0 12px ${t.greenGlow}`:"none"}}>
+      <span style={{fontSize:sz*.5,fontWeight:700,color:done?t.greenBright:tap?t.muted:t.mutedDark,
+        transform:burst?"scale(1.3)":"scale(1)",transition:"transform 0.3s cubic-bezier(0.34,1.56,0.64,1)"}}>{done?"✓":"○"}</span></div></div>
 }
 
 function Btn({children,onClick,v="primary",sm,t,style:s,disabled:dis}: {children:any,onClick?:()=>void,v?:string,sm?:boolean,t:any,style?:any,disabled?:boolean}) {
@@ -428,6 +453,11 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes}: any) {
               transform:expanded?"rotate(90deg)":"none",transition:"transform 0.2s"}}>▸</button>}
         </div>
         {task.subtitle&&<div style={{fontFamily:FB,fontSize:13,color:t.muted}}>{task.subtitle}</div>}
+        {task.postReq&&task.postReq!=="none"&&<div style={{display:"inline-flex",alignItems:"center",gap:3,
+          marginTop:2,padding:"2px 8px",borderRadius:6,background:`${t.gold}18`,border:`1px solid ${t.gold}33`}}>
+          <span style={{fontSize:11}}>{task.postReq==="photo"?"📸":task.postReq==="writing"?"⌨️":"📸⌨️"}</span>
+          <span style={{fontFamily:FB,fontSize:9,fontWeight:700,color:t.goldText,letterSpacing:0.5}}>
+            {task.postReq==="photo"?"PHOTO":task.postReq==="writing"?"POST":"PHOTO + POST"}</span></div>}
         {isXt&&<div style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>Target: {task.target}×</div>}
       </div>
       {isXt?<div style={{display:"flex",alignItems:"center",gap:4}}>
@@ -506,8 +536,9 @@ function MileageSheet({open,onClose,t,mutate,user,wk}: any) {
 
 function SetupSheet({open,field,onClose,t,mutate,wk,wkData}: any) {
   const [val,setVal] = useState(""); const [val2,setVal2] = useState(""); const [opts,setOpts] = useState("")
+  const [verseBody,setVerseBody] = useState("")
   useEffect(()=>{
-    if(field==="verse") setVal(wkData?.verse?.text||"")
+    if(field==="verse") {setVal(wkData?.verse?.text||""); setVerseBody(wkData?.verse?.fullText||"")}
     if(field==="whisper") setVal(wkData?.whisper?.text||"")
     if(field==="workout"){setOpts((wkData?.wkOpts||[]).join(", "));setVal(String(wkData?.wkTarget||3))}
     if(field==="mileage"){setVal(String(wkData?.miTarget||10));setVal2(String(wkData?.miOutMin||5))}
@@ -515,7 +546,7 @@ function SetupSheet({open,field,onClose,t,mutate,wk,wkData}: any) {
   const doSave = () => {
     mutate((nd: any) => {
       const w = gw(nd,wk)
-      if(field==="verse") w.verse={...w.verse,text:val}
+      if(field==="verse") w.verse={...w.verse,text:val,fullText:verseBody}
       if(field==="whisper") w.whisper={...w.whisper,text:val}
       if(field==="workout"){w.wkOpts=opts.split(",").map((s: string)=>s.trim()).filter(Boolean);w.wkTarget=parseInt(val)||3}
       if(field==="mileage"){w.miTarget=parseFloat(val)||10;w.miOutMin=parseFloat(val2)||5}
@@ -524,7 +555,11 @@ function SetupSheet({open,field,onClose,t,mutate,wk,wkData}: any) {
   }
   const titles: any = {verse:"Set Memory Verse",whisper:"Set Whisper Reading",workout:"Workout Setup",mileage:"Mileage Setup"}
   return <BSheet open={open} onClose={onClose} title={titles[field]||"Setup"} t={t}>
-    {field==="verse"&&<TA value={val} onChange={setVal} placeholder="Enter the verse..." t={t}/>}
+    {field==="verse"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Verse reference</div>
+        <Inp value={val} onChange={setVal} placeholder="e.g. Romans 8:28" t={t}/></div>
+      <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Full verse text <span style={{color:t.goldText}}>(for practice)</span></div>
+        <TA value={verseBody} onChange={setVerseBody} placeholder='e.g. "And we know that in all things God works for the good..."' t={t} rows={4}/></div></div>}
     {field==="whisper"&&<Inp value={val} onChange={setVal} placeholder="e.g. Chapters 3-4" t={t}/>}
     {field==="workout"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Options (comma-separated)</div>
@@ -545,10 +580,11 @@ function AddTaskSheet({open,onClose,t,mutate,wk}: any) {
   const [rec,setRec]=useState(false);const [scope,setScope]=useState("this")
   const [selWks,setSelWks]=useState<Record<number,boolean>>({})
   const [ch,setCh]=useState<string[]>([]);const [newCh,setNewCh]=useState("")
+  const [postReq,setPostReq]=useState<string>("none")
   const addChoice=()=>{if(newCh.trim()&&ch.length<3){setCh([...ch,newCh.trim()]);setNewCh("")}}
   const togWkSel=(w: number)=>setSelWks(p=>({...p,[w]:!p[w]}))
   const reset=()=>{setMode("create");setNm("");setSub("");setNotes("");setTp("onetime");setTarget("3");
-    setAsg("both");setRec(false);setScope("this");setSelWks({});setCh([]);setNewCh("")}
+    setAsg("both");setRec(false);setScope("this");setSelWks({});setCh([]);setNewCh("");setPostReq("none")}
   const applyPreset=(p: any)=>{setNm(p.name);setSub(p.subtitle||"");setTp(p.type);setTarget(String(p.target||3));
     setAsg(p.assignee||"both");setScope(p.scope||"this");setRec(p.recurring||false);setMode("create")}
   const PRESETS=[
@@ -568,7 +604,7 @@ function AddTaskSheet({open,onClose,t,mutate,wk}: any) {
   const add=()=>{if(!nm.trim())return
     mutate((nd: any)=>{
       const task: any={id:`t_${Date.now()}`,name:nm.trim(),subtitle:sub.trim(),notes:notes.trim(),type:tp,
-        target:tp==="xtimes"?parseInt(target)||3:null,assignee:asg,choices:ch.length>0?ch:[],
+        target:tp==="xtimes"?parseInt(target)||3:null,assignee:asg,postReq:postReq||"none",choices:ch.length>0?ch:[],
         choiceSel:{scott:0,filip:0},comp:tp==="xtimes"?{scott:0,filip:0}:tp==="daily"?{}:{scott:false,filip:false},order:999}
       if(scope==="program"){nd.progTasks=[...(nd.progTasks||[]),{...task,type:tp==="xtimes"?"xtimes":"onetime"}]}
       else{const weeks=scope==="all"?Array.from({length:10},(_,i)=>i+1)
@@ -631,6 +667,13 @@ function AddTaskSheet({open,onClose,t,mutate,wk}: any) {
           <Btn v="secondary" sm t={t} onClick={addChoice} style={{marginTop:6}}>+ Add Option</Btn></div>}</div>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Who does this?</div>
         <Tog opts={[{v:"both",l:"👥 Both"},{v:"scott",l:"⚔️ Scott"},{v:"filip",l:"🛡️ Filip"}]} value={asg} onChange={setAsg} t={t}/></div>
+      <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Band App post required?</div>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          {[{v:"none",icon:"—",l:"None"},{v:"photo",icon:"📸",l:"Photo"},{v:"writing",icon:"⌨️",l:"Post"},{v:"photoAndWriting",icon:"📸⌨️",l:"Photo + Post"}].map(o=>
+            <button key={o.v} onClick={()=>setPostReq(o.v)} style={{padding:"8px 12px",borderRadius:8,fontFamily:FB,fontSize:12,fontWeight:600,
+              cursor:"pointer",border:`1.5px solid ${postReq===o.v?t.gold:t.borderMed}`,display:"flex",alignItems:"center",gap:4,
+              background:postReq===o.v?t.goldDim:t.card2,color:postReq===o.v?t.goldText:t.cream}}>
+              <span style={{fontSize:14}}>{o.icon}</span>{o.l}</button>)}</div></div>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Applies to</div>
         <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
           {[{v:"this",l:"This week"},{v:"all",l:"All 10 weeks"},{v:"specific",l:"Pick weeks"},{v:"program",l:"Full program"}].map(o=>
@@ -656,16 +699,17 @@ function EditTaskSheet({open,task,onClose,t,mutate,wk}: any) {
   const [nm,setNm]=useState("");const [sub,setSub]=useState("");const [notes,setNotes]=useState("")
   const [tp,setTp]=useState("onetime");const [target,setTarget]=useState("3");const [asg,setAsg]=useState("both")
   const [ch,setCh]=useState<string[]>([]);const [newCh,setNewCh]=useState("");const [confirm,setConfirm]=useState(false)
+  const [postReq,setPostReq]=useState<string>("none")
   useEffect(()=>{if(task){setNm(task.name||"");setSub(task.subtitle||"");setNotes(task.notes||"");
     setTp(task.type||"onetime");setTarget(String(task.target||3));setAsg(task.assignee||"both");
-    setCh(task.choices||[]);setConfirm(false)}},[task])
+    setCh(task.choices||[]);setConfirm(false);setPostReq(task.postReq||"none")}},[task])
   const addChoice=()=>{if(newCh.trim()&&ch.length<3){setCh([...ch,newCh.trim()]);setNewCh("")}}
   const doSave=()=>{if(!task)return;const changes: string[]=[]
     if(nm!==task.name)changes.push(`name: "${task.name}" → "${nm}"`)
     if(tp!==task.type)changes.push(`type: ${task.type} → ${tp}`)
     if(asg!==task.assignee)changes.push(`assigned: ${task.assignee} → ${asg}`)
     mutate((nd: any)=>{
-      const update: any={name:nm,subtitle:sub,notes,type:tp,assignee:asg,target:tp==="xtimes"?parseInt(target)||3:null,choices:ch}
+      const update: any={name:nm,subtitle:sub,notes,type:tp,assignee:asg,postReq,target:tp==="xtimes"?parseInt(target)||3:null,choices:ch}
       if(tp!==task.type) update.comp=tp==="xtimes"?{scott:0,filip:0}:tp==="daily"?{}:{scott:false,filip:false}
       const w=gw(nd,wk);const idx=w.tasks.findIndex((x: any)=>x.id===task.id)
       if(idx>=0) w.tasks[idx]={...w.tasks[idx],...update}
@@ -704,6 +748,13 @@ function EditTaskSheet({open,task,onClose,t,mutate,wk}: any) {
               fontFamily:FB,fontSize:13,fontWeight:700,cursor:"pointer"}}>{n}</button>)}</div></div>}
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Assigned to</div>
         <Tog opts={[{v:"both",l:"👥 Both"},{v:"scott",l:"⚔️ Scott"},{v:"filip",l:"🛡️ Filip"}]} value={asg} onChange={setAsg} t={t}/></div>
+      <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Band App post required?</div>
+        <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+          {[{v:"none",icon:"—",l:"None"},{v:"photo",icon:"📸",l:"Photo"},{v:"writing",icon:"⌨️",l:"Post"},{v:"photoAndWriting",icon:"📸⌨️",l:"Photo + Post"}].map(o=>
+            <button key={o.v} onClick={()=>setPostReq(o.v)} style={{padding:"6px 12px",borderRadius:8,fontFamily:FB,fontSize:12,fontWeight:600,
+              cursor:"pointer",border:`1.5px solid ${postReq===o.v?t.gold:t.borderMed}`,display:"flex",alignItems:"center",gap:4,
+              background:postReq===o.v?t.goldDim:t.card2,color:postReq===o.v?t.goldText:t.cream}}>
+              <span style={{fontSize:13}}>{o.icon}</span>{o.l}</button>)}</div></div>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Choices</div>
         {ch.map((c,i)=><div key={i} style={{display:"flex",gap:6,marginBottom:6,alignItems:"flex-start",padding:"8px 10px",
           background:t.card2,borderRadius:8,border:`1px solid ${t.border}`}}>
@@ -720,7 +771,7 @@ function EditTaskSheet({open,task,onClose,t,mutate,wk}: any) {
 
 function PlanSheet({open,onClose,t,mutate,wk,prevTasks,D}: any) {
   const nextWk=wk+1;const [copied,setCopied]=useState<Record<string,boolean>>({})
-  const [verse,setVerse]=useState("");const [whisper,setWhisper]=useState("")
+  const [verse,setVerse]=useState("");const [verseBody,setVerseBody]=useState("");const [whisper,setWhisper]=useState("")
   const [wkTarget,setWkTarget]=useState("3");const [miTarget,setMiTarget]=useState("6");const [miOut,setMiOut]=useState("4")
   const [wkOpts,setWkOpts]=useState("");const [setupCopied,setSetupCopied]=useState(false)
   if(nextWk>10)return null
@@ -739,7 +790,7 @@ function PlanSheet({open,onClose,t,mutate,wk,prevTasks,D}: any) {
     const allCopied: Record<string,boolean>={};(prevTasks||[]).forEach((t2: any)=>{allCopied[t2.id]=true});setCopied({...copied,...allCopied})}
   const copySetup=()=>{mutate((nd: any)=>{const pw=gw(nd,wk);const nw2=gw(nd,nextWk)
     nw2.wkOpts=[...pw.wkOpts];nw2.wkTarget=pw.wkTarget;nw2.miTarget=pw.miTarget;nw2.miOutMin=pw.miOutMin;return nd});setSetupCopied(true)}
-  const saveVerse=()=>{if(!verse.trim())return;mutate((nd: any)=>{const nw2=gw(nd,nextWk);nw2.verse={...nw2.verse,text:verse.trim()};return nd})}
+  const saveVerse=()=>{if(!verse.trim())return;mutate((nd: any)=>{const nw2=gw(nd,nextWk);nw2.verse={...nw2.verse,text:verse.trim(),fullText:verseBody.trim()};return nd})}
   const saveWhisper=()=>{if(!whisper.trim())return;mutate((nd: any)=>{const nw2=gw(nd,nextWk);nw2.whisper={...nw2.whisper,text:whisper.trim()};return nd})}
   const saveTargets=()=>{mutate((nd: any)=>{const nw2=gw(nd,nextWk)
     nw2.wkTarget=parseInt(wkTarget)||3;nw2.miTarget=parseInt(miTarget)||6;nw2.miOutMin=parseInt(miOut)||4
@@ -760,10 +811,11 @@ function PlanSheet({open,onClose,t,mutate,wk,prevTasks,D}: any) {
 
     {/* Memory Verse */}
     <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2,marginBottom:6}}>📖 Memory Verse</div>
-    {hasVerse?<div style={{fontFamily:FB,fontSize:13,color:t.green,marginBottom:12}}>✓ Set: {nw.verse.text}</div>
-    :<div style={{display:"flex",gap:6,marginBottom:12}}>
-      <Inp value={verse} onChange={setVerse} placeholder="e.g. Romans 8:28" t={t} style={{flex:1,padding:"8px 10px",fontSize:12}}/>
-      <Btn v="primary" sm t={t} onClick={saveVerse}>Set</Btn></div>}
+    {hasVerse?<div style={{fontFamily:FB,fontSize:13,color:t.green,marginBottom:12}}>✓ Set: {nw.verse.text}{nw.verse.fullText?"":" (add verse text in Verse tab)"}</div>
+    :<div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:12}}>
+      <Inp value={verse} onChange={setVerse} placeholder="Reference — e.g. Romans 8:28" t={t} style={{padding:"8px 10px",fontSize:12}}/>
+      <TA value={verseBody} onChange={setVerseBody} placeholder="Full verse text for practice (optional — can add later)" t={t} rows={2}/>
+      <Btn v="primary" sm t={t} onClick={saveVerse}>Set Verse</Btn></div>}
 
     {/* Whisper Reading */}
     <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream2,marginBottom:6}}>📕 Whisper Reading</div>
@@ -1200,7 +1252,8 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
           {["scott","filip"].map(who=><div key={who} style={{flex:1}}>
             <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[who],marginBottom:3}}>{who.toUpperCase()}</div>
             {user===who?<TA value={D.growth?.[area]?.[who]||""} onChange={(v: string)=>updateGrowth(area,who,v)} placeholder="Your commitment..." t={t} rows={2}/>
-            :<div style={{fontFamily:FB,fontSize:14,color:t.cream2,padding:8,background:t.card2,borderRadius:8,minHeight:40}}>
+            :<div style={{fontFamily:FB,fontSize:14,color:t.cream2,padding:8,background:t.card2,borderRadius:8,minHeight:40,
+              whiteSpace:"pre-wrap",wordWrap:"break-word",overflowWrap:"break-word"}}>
               {D.growth?.[area]?.[who]||<span style={{color:t.mutedDark}}>Not set</span>}</div>}
           </div>)}</div>
         {(D.growth?.[area]?.comments||[]).length>0&&<div style={{borderTop:`1px solid ${t.border}`,paddingTop:6,marginTop:4}}>
@@ -1218,7 +1271,8 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
       {["scott","filip"].map(who=><div key={who} style={{flex:1}}>
         <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[who],marginBottom:3}}>{who.toUpperCase()}</div>
         {user===who?<TA value={D.giving?.[who]||""} onChange={updateGiving} placeholder="What are you giving up?" t={t} rows={2}/>
-        :<div style={{fontFamily:FB,fontSize:14,color:t.cream2,padding:8,background:t.card2,borderRadius:8,minHeight:40}}>
+        :<div style={{fontFamily:FB,fontSize:14,color:t.cream2,padding:8,background:t.card2,borderRadius:8,minHeight:40,
+          whiteSpace:"pre-wrap",wordWrap:"break-word",overflowWrap:"break-word"}}>
           {D.giving?.[who]||<span style={{color:t.mutedDark}}>Not set</span>}</div>}
       </div>)}</div></Card>
     <XDiv t={t} idx={7} onTap={crossTap}/>
@@ -1309,21 +1363,367 @@ function HistoryTab({D,mutate,t,brave,onBrave}: any) {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// MEMORY VERSE PRACTICE
+// ═══════════════════════════════════════════════════════════════
+const parseWords = (text: string): {word:string,punct:string}[] => {
+  return text.split(/\s+/).filter(Boolean).map(w => {
+    const m = w.match(/^([\w''-]+)([^a-zA-Z0-9]*)$/)
+    return m ? {word:m[1],punct:m[2]} : {word:w,punct:""}
+  })
+}
+const levenshtein = (a: string, b: string): number => {
+  const m = a.length, n = b.length; const d: number[][] = Array.from({length:m+1},(_,i)=>Array.from({length:n+1},(_,j)=>i===0?j:j===0?i:0))
+  for(let i=1;i<=m;i++) for(let j=1;j<=n;j++) d[i][j]=Math.min(d[i-1][j]+1,d[i][j-1]+1,d[i-1][j-1]+(a[i-1]===b[j-1]?0:1))
+  return d[m][n]
+}
+const COMMON_WORDS = new Set(["a","an","the","and","or","but","of","in","to","is","for","it","he","she","we","his","her","my","by","on","at","as","so","if","no","not","be","do","up","all","who","that","this","with","from","will","are","was","had","has","have","them","they","your","been","were"])
+const getMastery = (vm: any, wk: number): number => {
+  const m = vm?.[wk]; if(!m) return 0
+  const modes = [m.progressive, m.firstLetters, m.fillBlank, m.typeOut?.completed].filter(Boolean).length
+  if(modes>=4 && (m.typeOut?.best||0)>=90) return 4
+  if(modes>=3) return 3; if(modes>=2) return 2; if(modes>=1) return 1; return 0
+}
+const MASTERY_ICONS = ["○","◔","◑","◕","●"]
+const MASTERY_LABELS = ["Not Started","Familiar","Practicing","Strong","Memorized"]
+const MASTERY_COLORS = (t: any) => [t.mutedDark,t.muted,t.goldText,t.greenBright,t.goldBright]
+
+function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdate}: 
+  {open:boolean,onClose:()=>void,verse:{text:string,fullText:string},weekNum:number,t:any,mastery:any,onMasteryUpdate:(wk:number,mode:string,data?:any)=>void}) {
+  const [mode,setMode]=useState(0) // 0=progressive, 1=firstLetter, 2=fillBlank, 3=typeOut
+  const [stage,setStage]=useState(0)
+  const [flShow,setFlShow]=useState(false) // first letter: show full verse
+  const [fbSel,setFbSel]=useState<number|null>(null) // fill blank: selected blank
+  const [fbAns,setFbAns]=useState<Record<number,string>>({}) // fill blank: placed answers
+  const [fbChecked,setFbChecked]=useState(false)
+  const [fbCorrect,setFbCorrect]=useState<Record<number,boolean>>({})
+  const [typed,setTyped]=useState("")
+  const [typeChecked,setTypeChecked]=useState(false)
+  const [typePeek,setTypePeek]=useState(false)
+  const [peekTimer,setPeekTimer]=useState(0)
+
+  const fullText = verse.fullText || ""
+  const words = useMemo(()=>parseWords(fullText),[fullText])
+
+  // Progressive: determine which indices to hide at each stage
+  const hiddenAt = useMemo(()=>{
+    if(!words.length) return [[],[],[],[],[]]
+    const scored = words.map((w,i)=>({i,common:COMMON_WORDS.has(w.word.toLowerCase())}))
+    const nonCommon = scored.filter(x=>!x.common).map(x=>x.i)
+    const common = scored.filter(x=>x.common).map(x=>x.i)
+    // Shuffle deterministically using word index as seed
+    const shuffle = (arr: number[]) => arr.slice().sort((a,b)=>((a*7+3)%13)-((b*7+3)%13))
+    const ordered = [...shuffle(nonCommon),...shuffle(common)]
+    const s1 = Math.ceil(words.length*0.25), s2 = Math.ceil(words.length*0.5), s3 = Math.ceil(words.length*0.75)
+    return [
+      [] as number[],
+      ordered.slice(0,s1),
+      ordered.slice(0,s2),
+      ordered.slice(0,s3),
+      ordered.map((_,i)=>ordered[i]) // all
+    ]
+  },[words])
+
+  // Fill-in-blank: select words to blank and distractors
+  const fbData = useMemo(()=>{
+    if(!words.length) return {blanks:[],bank:[],distractors:[]}
+    const candidates = words.map((w,i)=>({i,w:w.word,common:COMMON_WORDS.has(w.word.toLowerCase())}))
+      .filter(x=>!x.common && x.i>0)
+    const selected = candidates.slice().sort((a,b)=>((a.i*11+5)%17)-((b.i*11+5)%17)).slice(0,Math.min(7,Math.max(4,Math.ceil(words.length*0.2))))
+      .sort((a,b)=>a.i-b.i)
+    const blankIndices = selected.map(s=>s.i)
+    const correctWords = selected.map(s=>s.w)
+    const distractors = ["grace","mercy","peace","truth","spirit","glory","faith","righteousness","salvation","kingdom"]
+      .filter(d=>!correctWords.map(c=>c.toLowerCase()).includes(d)).slice(0,3)
+    const bank = [...correctWords,...distractors].sort((a,b)=>((a.charCodeAt(0)*7)%13)-((b.charCodeAt(0)*7)%13))
+    return {blanks:blankIndices,bank,distractors}
+  },[words])
+
+  // Type-it-out comparison
+  const typeResults = useMemo(()=>{
+    if(!typeChecked || !typed.trim()) return null
+    const typedWords = typed.trim().split(/\s+/)
+    const expected = words.map(w=>w.word)
+    const results: {expected:string,got:string,status:"correct"|"typo"|"wrong"|"missing"|"extra"}[] = []
+    let ei=0, ti=0
+    while(ei<expected.length || ti<typedWords.length){
+      if(ei<expected.length && ti<typedWords.length){
+        if(expected[ei].toLowerCase()===typedWords[ti].toLowerCase().replace(/[^a-zA-Z0-9'-]/g,"")){
+          results.push({expected:expected[ei],got:typedWords[ti],status:"correct"}); ei++; ti++
+        } else if(levenshtein(expected[ei].toLowerCase(),typedWords[ti].toLowerCase().replace(/[^a-zA-Z0-9'-]/g,""))<=2){
+          results.push({expected:expected[ei],got:typedWords[ti],status:"typo"}); ei++; ti++
+        } else { results.push({expected:expected[ei],got:typedWords[ti],status:"wrong"}); ei++; ti++ }
+      } else if(ei<expected.length){ results.push({expected:expected[ei],got:"",status:"missing"}); ei++ }
+      else { results.push({expected:"",got:typedWords[ti],status:"extra"}); ti++ }
+    }
+    const correct = results.filter(r=>r.status==="correct"||r.status==="typo").length
+    const pct = expected.length>0?Math.round((correct/expected.length)*100):0
+    return {results,pct,correct,total:expected.length}
+  },[typeChecked,typed,words])
+
+  // Peek timer
+  useEffect(()=>{
+    if(!typePeek) return
+    setPeekTimer(10)
+    const iv=setInterval(()=>setPeekTimer(p=>{if(p<=1){setTypePeek(false);clearInterval(iv);return 0}return p-1}),1000)
+    return ()=>clearInterval(iv)
+  },[typePeek])
+
+  const resetMode = ()=>{setStage(0);setFlShow(false);setFbSel(null);setFbAns({});setFbChecked(false);setFbCorrect({})
+    setTyped("");setTypeChecked(false);setTypePeek(false)}
+  const switchMode = (m: number)=>{setMode(m);resetMode()}
+
+  if(!open || !fullText) return null
+
+  const modes = [{icon:"📖",label:"Remove"},{icon:"🔤",label:"Letters"},{icon:"✏️",label:"Blanks"},{icon:"⌨️",label:"Type"}]
+  const m = mastery?.[weekNum] || {}
+
+  return <div style={{position:"fixed",inset:0,zIndex:200,background:t.bg,overflowY:"auto",display:"flex",flexDirection:"column"}}>
+    {/* Header */}
+    <div style={{padding:"12px 16px",borderBottom:`1px solid ${t.border}`,background:t.hdrBg,backdropFilter:"blur(12px)"}}>
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+        <button onClick={onClose} style={{background:"none",border:"none",color:t.cream,fontSize:16,cursor:"pointer",padding:"4px 8px"}}>← Back</button>
+        <div style={{textAlign:"center"}}><div style={{fontFamily:FD,fontSize:16,color:t.cream}}>Week {weekNum}</div>
+          <div style={{fontFamily:FB,fontSize:12,color:t.goldText}}>{verse.text}</div></div>
+        <div style={{width:50}}/>
+      </div>
+      <div style={{display:"flex",gap:4}}>
+        {modes.map((md,i)=>{
+          const done = i===0?m.progressive:i===1?m.firstLetters:i===2?m.fillBlank:m.typeOut?.completed
+          return <button key={i} onClick={()=>switchMode(i)} style={{flex:1,padding:"8px 4px",borderRadius:8,border:`1.5px solid ${mode===i?t.gold:done?`${t.green}66`:t.borderMed}`,
+            background:mode===i?t.goldDim:done?t.greenDim:"transparent",cursor:"pointer",textAlign:"center"}}>
+            <div style={{fontSize:14}}>{md.icon}</div>
+            <div style={{fontFamily:FB,fontSize:10,fontWeight:600,color:mode===i?t.goldText:done?t.greenBright:t.muted}}>{md.label}</div>
+            {done&&<div style={{fontSize:8,color:t.greenBright}}>✓</div>}
+          </button>})}
+      </div>
+    </div>
+    {/* Content */}
+    <div style={{flex:1,padding:"16px",overflowY:"auto"}}>
+      {/* MODE 0: Progressive Word Removal */}
+      {mode===0&&<div>
+        <div style={{display:"flex",gap:4,marginBottom:16}}>
+          {[0,1,2,3,4].map(s=><div key={s} style={{flex:1,height:4,borderRadius:2,
+            background:s<=stage?t.gold:t.border,transition:"all 0.3s"}}/>)}</div>
+        <div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:12,textAlign:"center"}}>
+          {stage===0?"Read the full verse":stage===4?"Recite from memory!":
+            `${Math.round((hiddenAt[stage]?.length/Math.max(words.length,1))*100)}% hidden`}</div>
+        <Card t={t} style={{padding:20}}>
+          <div style={{fontFamily:FD,fontSize:18,color:t.cream,lineHeight:1.7,textAlign:"center"}}>
+            {words.map((w,i)=>{const hidden=(hiddenAt[stage]||[]).includes(i)
+              return <span key={i}>{hidden?<span style={{display:"inline-block",minWidth:w.word.length*9,borderBottom:`2px solid ${t.borderMed}`,
+                margin:"0 2px"}}>&nbsp;</span>:<span>{w.word}</span>}{w.punct}<span> </span></span>})}
+          </div>
+        </Card>
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
+          {stage>0&&<Btn v="secondary" t={t} onClick={()=>setStage(stage-1)}>← Back</Btn>}
+          {stage<4?<Btn t={t} onClick={()=>setStage(stage+1)}>Next Stage →</Btn>
+          :<div style={{display:"flex",gap:8}}>
+            <Btn v="secondary" t={t} onClick={()=>setStage(0)}>Try Again</Btn>
+            <Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"progressive")}>✓ I Got It!</Btn></div>}
+        </div>
+      </div>}
+      {/* MODE 1: First Letter Method */}
+      {mode===1&&<div>
+        <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:12,textAlign:"center"}}>
+          {flShow?"Full verse shown — study it":"Each word reduced to its first letter"}</div>
+        <Card t={t} style={{padding:20}}>
+          <div style={{fontFamily:flShow?FD:"monospace",fontSize:flShow?18:20,color:t.cream,lineHeight:1.8,textAlign:"center",letterSpacing:flShow?0:2}}>
+            {flShow?words.map((w,i)=><span key={i}>{w.word}{w.punct} </span>)
+            :words.map((w,i)=><span key={i}><span style={{color:t.goldText,fontWeight:700}}>{w.word[0]}</span><span style={{color:t.mutedDark}}>.</span>{w.punct} </span>)}
+          </div>
+        </Card>
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
+          <Btn v="secondary" t={t} onClick={()=>setFlShow(!flShow)}>{flShow?"Hide Verse":"Show Verse"}</Btn>
+          <Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"firstLetters")}>✓ I've Got It!</Btn>
+        </div>
+      </div>}
+      {/* MODE 2: Fill in the Blank */}
+      {mode===2&&<div>
+        <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:12,textAlign:"center"}}>
+          Tap a blank, then tap a word from the bank</div>
+        <Card t={t} style={{padding:16}}>
+          <div style={{fontFamily:FD,fontSize:16,color:t.cream,lineHeight:2,textAlign:"center"}}>
+            {words.map((w,i)=>{
+              const blankIdx = fbData.blanks.indexOf(i)
+              if(blankIdx===-1) return <span key={i}>{w.word}{w.punct} </span>
+              const ans = fbAns[i]
+              const isCorrect = fbChecked ? fbCorrect[i] : null
+              return <span key={i}><button onClick={()=>{if(fbChecked)return;if(ans){const na={...fbAns};delete na[i];setFbAns(na)}else setFbSel(i)}}
+                style={{display:"inline-block",minWidth:50,padding:"2px 8px",margin:"0 2px",borderRadius:6,cursor:"pointer",
+                  border:`2px ${fbSel===i?"dashed":"solid"} ${isCorrect===true?t.green:isCorrect===false?t.red:fbSel===i?t.gold:t.borderMed}`,
+                  background:isCorrect===true?t.greenDim:isCorrect===false?"rgba(212,80,80,0.15)":ans?t.goldDim:"transparent",
+                  fontFamily:FB,fontSize:14,fontWeight:600,color:ans?(isCorrect===false?t.red:t.goldText):t.mutedDark}}>
+                {ans||`__${blankIdx+1}__`}</button>{w.punct} </span>})}
+          </div>
+        </Card>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:12,justifyContent:"center"}}>
+          {fbData.bank.map((w,i)=>{const used=Object.values(fbAns).includes(w)
+            return <button key={i} onClick={()=>{if(fbChecked||used||fbSel===null)return;setFbAns({...fbAns,[fbSel]:w});setFbSel(null)}}
+              style={{padding:"8px 14px",borderRadius:8,fontFamily:FB,fontSize:14,fontWeight:600,cursor:used?"default":"pointer",
+                border:`1.5px solid ${used?t.borderMed:t.gold}`,background:used?t.card2:t.goldDim,
+                color:used?t.mutedDark:t.goldText,opacity:used?.4:1}}>{w}</button>})}
+        </div>
+        <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
+          {!fbChecked?<>
+            <Btn v="secondary" t={t} onClick={()=>{setFbAns({});setFbSel(null);setFbChecked(false);setFbCorrect({})}}>Reset</Btn>
+            <Btn t={t} disabled={Object.keys(fbAns).length<fbData.blanks.length} onClick={()=>{
+              const corr: Record<number,boolean>={}; let allRight=true
+              fbData.blanks.forEach(idx=>{const ok=fbAns[idx]?.toLowerCase()===words[idx].word.toLowerCase();corr[idx]=ok;if(!ok)allRight=false})
+              setFbCorrect(corr);setFbChecked(true)
+              if(allRight) onMasteryUpdate(weekNum,"fillBlank")
+            }}>Check Answers</Btn></>
+          :<><Btn v="secondary" t={t} onClick={()=>{setFbAns({});setFbSel(null);setFbChecked(false);setFbCorrect({})}}>Try Again</Btn>
+            {Object.values(fbCorrect).every(Boolean)&&
+              <div style={{fontFamily:FB,fontSize:14,fontWeight:700,color:t.greenBright}}>✓ All correct!</div>}</>}
+        </div>
+      </div>}
+      {/* MODE 3: Type It Out */}
+      {mode===3&&<div>
+        <div style={{fontFamily:FD,fontSize:18,color:t.goldText,textAlign:"center",marginBottom:12}}>{verse.text}</div>
+        {!typeChecked?<>
+          {!typePeek&&<div style={{textAlign:"center",marginBottom:12}}>
+            <button onClick={()=>setTypePeek(true)} style={{fontFamily:FB,fontSize:12,color:t.muted,background:t.card2,border:`1px solid ${t.borderMed}`,
+              borderRadius:8,padding:"6px 14px",cursor:"pointer"}}>👁 Peek at verse (10s)</button></div>}
+          {typePeek&&<Card t={t} style={{padding:14,marginBottom:12,borderColor:`${t.gold}44`}}>
+            <div style={{fontFamily:FD,fontSize:15,fontStyle:"italic",color:t.cream2,lineHeight:1.5,textAlign:"center"}}>{fullText}</div>
+            <div style={{fontFamily:FB,fontSize:11,color:t.urgent,textAlign:"center",marginTop:6}}>Hiding in {peekTimer}s...</div></Card>}
+          <textarea value={typed} onChange={e=>setTyped(e.target.value)} placeholder="Type the verse from memory..."
+            style={{width:"100%",boxSizing:"border-box",minHeight:120,padding:14,borderRadius:12,border:`1.5px solid ${t.borderMed}`,
+              background:t.card2,color:t.cream,fontFamily:FB,fontSize:16,lineHeight:1.6,outline:"none",resize:"vertical"}}/>
+          <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginTop:4}}>{typed.trim().split(/\s+/).filter(Boolean).length}/{words.length} words</div>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12}}>
+            <Btn t={t} disabled={!typed.trim()} onClick={()=>setTypeChecked(true)}>Check</Btn></div>
+        </>:<>
+          {typeResults&&<div>
+            <div style={{textAlign:"center",marginBottom:12}}>
+              <div style={{fontFamily:FD,fontSize:32,color:typeResults.pct>=90?t.greenBright:typeResults.pct>=70?t.goldBright:t.red}}>{typeResults.pct}%</div>
+              <div style={{fontFamily:FB,fontSize:13,color:t.muted}}>{typeResults.correct}/{typeResults.total} words correct</div></div>
+            <Card t={t} style={{padding:14}}>
+              <div style={{lineHeight:1.8}}>
+                {typeResults.results.map((r,i)=>{
+                  const col = r.status==="correct"?t.greenBright:r.status==="typo"?t.goldBright:r.status==="extra"?t.mutedDark:t.red
+                  const bg = r.status==="correct"?t.greenDim:r.status==="typo"?t.goldDim:r.status==="extra"?"transparent":"rgba(212,80,80,0.12)"
+                  const icon = r.status==="correct"?"":"✗"
+                  return <span key={i} style={{display:"inline",padding:"1px 4px",borderRadius:4,margin:"1px",
+                    background:bg,fontFamily:FB,fontSize:15,color:col}} title={r.status==="wrong"||r.status==="missing"?`Expected: ${r.expected}`:""}>
+                    {r.got||r.expected}{r.status==="wrong"&&<span style={{fontSize:10,marginLeft:2}}>{icon}</span>} </span>})}
+              </div>
+            </Card>
+            <div style={{fontFamily:FB,fontSize:12,color:t.muted,marginTop:8,textAlign:"center"}}>
+              <span style={{color:t.greenBright}}>■</span> Correct &nbsp;
+              <span style={{color:t.goldBright}}>■</span> Close &nbsp;
+              <span style={{color:t.red}}>■</span> Wrong/Missing</div>
+            <div style={{marginTop:12,padding:10,background:t.card2,borderRadius:10,border:`1px solid ${t.border}`}}>
+              <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.muted,marginBottom:4}}>CORRECT VERSE:</div>
+              <div style={{fontFamily:FD,fontSize:14,fontStyle:"italic",color:t.cream2,lineHeight:1.5}}>{fullText}</div></div>
+            {typeResults.pct>=80&&!m.typeOut?.completed&&
+              <div style={{textAlign:"center",marginTop:8}}><Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"typeOut",{best:typeResults.pct})}>✓ Mark Complete</Btn></div>}
+          </div>}
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12}}>
+            <Btn v="secondary" t={t} onClick={()=>{setTyped("");setTypeChecked(false)}}>Try Again</Btn></div>
+        </>}
+      </div>}
+    </div>
+  </div>
+}
+
+function MemoryVerseTab({D,mutate,user,t}: any) {
+  const [practiceWk,setPracticeWk]=useState<number|null>(null)
+  const maxWk = Math.min(Math.floor(dn(today())/7)+1,10)
+  const currentWk = maxWk
+  const vm = D?.verseMastery || {}
+
+  // Collect all verses from weeks 1 to current
+  const verses: {wk:number,verse:any}[] = []
+  for(let w=1;w<=maxWk;w++){
+    const wk = D?.weeks?.[w]; if(wk?.verse?.text) verses.push({wk:w,verse:wk.verse})
+  }
+
+  const onMasteryUpdate = (wk: number, mode: string, data?: any) => {
+    mutate((nd: any) => {
+      if(!nd.verseMastery) nd.verseMastery = {}
+      if(!nd.verseMastery[wk]) nd.verseMastery[wk] = {}
+      if(mode==="progressive") nd.verseMastery[wk].progressive = true
+      if(mode==="firstLetters") nd.verseMastery[wk].firstLetters = true
+      if(mode==="fillBlank") nd.verseMastery[wk].fillBlank = true
+      if(mode==="typeOut"){
+        const prev = nd.verseMastery[wk].typeOut || {completed:false,best:0}
+        nd.verseMastery[wk].typeOut = {completed:true,best:Math.max(prev.best,data?.best||0)}
+      }
+      addLog(nd,{type:"complete",user,task:`verse_${mode}`,date:tds()})
+      return nd
+    })
+  }
+
+  const practiceVerse = practiceWk ? D?.weeks?.[practiceWk]?.verse : null
+
+  return <div>
+    <VersePracticeModal open={!!practiceWk && !!practiceVerse?.fullText} onClose={()=>setPracticeWk(null)}
+      verse={practiceVerse||{text:"",fullText:""}} weekNum={practiceWk||1} t={t} mastery={vm} onMasteryUpdate={onMasteryUpdate}/>
+
+    <SH icon="📖" t={t}>Memory Verses</SH>
+    <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:12}}>Practice this week's verse or review any past verse</div>
+
+    {verses.length===0&&<Card t={t} style={{textAlign:"center",padding:24}}>
+      <div style={{fontSize:24,marginBottom:8}}>📖</div>
+      <div style={{fontFamily:FB,fontSize:14,color:t.mutedDark}}>No verses set yet — add a verse in the Track or Week tab</div></Card>}
+
+    {verses.slice().reverse().map(({wk,verse})=>{
+      const isCurrent = wk===currentWk
+      const mastery = getMastery(vm,wk)
+      const mColors = MASTERY_COLORS(t)
+      const hasFull = !!verse.fullText
+      return <Card key={wk} t={t} style={{borderColor:isCurrent?`${t.gold}44`:undefined,
+        boxShadow:isCurrent?`0 0 12px ${t.goldDim}`:`0 1px 3px rgba(0,0,0,0.2)`}}>
+        <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",marginBottom:6}}>
+          <div>
+            {isCurrent&&<span style={{fontFamily:FB,fontSize:10,fontWeight:700,color:t.goldText,background:t.goldDim,
+              padding:"2px 8px",borderRadius:4,marginBottom:4,display:"inline-block"}}>THIS WEEK</span>}
+            <div style={{fontFamily:FD,fontSize:16,color:t.cream,marginTop:isCurrent?4:0}}>Week {wk}</div>
+          </div>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontFamily:FB,fontSize:16,color:mColors[mastery]}}>{MASTERY_ICONS[mastery]}</div>
+            <div style={{fontFamily:FB,fontSize:10,color:mColors[mastery]}}>{MASTERY_LABELS[mastery]}</div>
+          </div>
+        </div>
+        <div style={{fontFamily:FD,fontSize:15,color:t.goldText,marginBottom:2}}>{verse.text}</div>
+        {hasFull&&<div style={{fontFamily:FB,fontSize:13,color:t.cream2,lineHeight:1.4,marginBottom:8,
+          display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any,overflow:"hidden"}}>
+          {verse.fullText}</div>}
+        {hasFull?<button onClick={()=>setPracticeWk(wk)} style={{width:"100%",padding:"10px",borderRadius:10,
+          border:`1.5px solid ${t.gold}`,background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>
+          📖 Practice</button>
+        :<div style={{fontFamily:FB,fontSize:12,color:t.mutedDark,fontStyle:"italic",padding:"6px 0"}}>
+          Add full verse text to enable practice — tap Edit on the Track tab</div>}
+        {/* Mini mastery dots */}
+        {hasFull&&<div style={{display:"flex",gap:6,marginTop:8,justifyContent:"center"}}>
+          {["Remove","Letters","Blanks","Type"].map((ml,mi)=>{
+            const m2 = vm[wk]||{}
+            const done = mi===0?m2.progressive:mi===1?m2.firstLetters:mi===2?m2.fillBlank:m2.typeOut?.completed
+            return <div key={mi} style={{display:"flex",alignItems:"center",gap:3}}>
+              <div style={{width:8,height:8,borderRadius:4,background:done?t.greenBright:t.borderMed}}/>
+              <span style={{fontFamily:FB,fontSize:10,color:done?t.greenBright:t.mutedDark}}>{ml}</span></div>})}
+        </div>}
+      </Card>})}
+  </div>
+}
+
+// ═══════════════════════════════════════════════════════════════
 // MAIN APP
 // ═══════════════════════════════════════════════════════════════
 export default function FC30App() {
-  const { D, loading, mutate, setLocal } = useFC30()
+  const { D, loading, mutate, user, theme, setUser, setTheme } = useFC30()
   const [tab,setTab] = useState("track")
   const [dayNum,setDayNum] = useState(()=>Math.max(0,Math.min(dn(today()),69)))
   const [weekView,setWeekView] = useState(()=>Math.floor(Math.max(0,Math.min(dn(today()),69))/7)+1)
   const [showLion,setShowLion] = useState(false);const [showFreedom,setShowFreedom] = useState(false)
   const [showMidnight,setShowMidnight] = useState(false);const [nehWord,setNehWord] = useState<string|null>(null);const [showNeh,setShowNeh] = useState(false)
   const [streakMs,setStreakMs] = useState<number|null>(null);const [mileMs,setMileMs] = useState<number|null>(null)
+  useFavicon()
 
   const wk = Math.floor(dayNum/7)+1
-  const user = D?.user
   const brave = D?.brave || false
-  const themeKey = brave?"braveheart":(D?.theme||"dark")
+  const themeKey = brave?"braveheart":(theme||"dark")
   const t = THEMES[themeKey] || THEMES.dark
 
   const crossTap = useCallback((idx: number) => {
@@ -1352,7 +1752,7 @@ export default function FC30App() {
       <div style={{fontFamily:FB,fontSize:12,color:THEMES.dark.muted,marginTop:8}}>Hold the Line — Nehemiah 4:14</div></div>
     <div style={{fontFamily:FB,fontSize:14,color:THEMES.dark.cream2,marginBottom:16}}>Who are you?</div>
     <div style={{display:"flex",gap:16}}>
-      {(["scott","filip"] as const).map(name=><button key={name} onClick={()=>setLocal({user:name})}
+      {(["scott","filip"] as const).map(name=><button key={name} onClick={()=>setUser(name)}
         style={{width:120,padding:"20px 16px",borderRadius:16,border:`2px solid ${THEMES.dark[name]}`,background:THEMES.dark.card,cursor:"pointer",textAlign:"center"}}>
         <div style={{fontSize:28,marginBottom:6}}>{name==="scott"?"⚔️":"🛡️"}</div>
         <div style={{fontFamily:FD,fontSize:18,color:THEMES.dark[name]}}>{name[0].toUpperCase()+name.slice(1)}</div>
@@ -1379,9 +1779,9 @@ export default function FC30App() {
           <div style={{fontFamily:FB,fontSize:11,color:t.muted}}>{brave?"They may take our lives...":"Chapter 30 — Nehemiah 4:14"}</div></div></div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
           <div style={{display:"flex",gap:1}}>{Array.from({length:4}).map((_,i)=><Shield key={i} on={i<(D.strikes?.[user]||0)} s={10} t={t}/>)}</div>
-          <button onClick={()=>{if(brave){toggleBrave();return}setLocal({theme:D.theme==="dark"?"light":"dark"})}}
-            style={{background:"none",border:"none",color:t.muted,fontSize:16,cursor:"pointer",padding:4}}>{D.theme==="dark"?"☀️":"🌙"}</button>
-          <button onClick={()=>setLocal({user:user==="scott"?"filip":"scott"})}
+          <button onClick={()=>{if(brave){toggleBrave();return}setTheme(theme==="dark"?"light":"dark")}}
+            style={{background:"none",border:"none",color:t.muted,fontSize:16,cursor:"pointer",padding:4}}>{theme==="dark"?"☀️":"🌙"}</button>
+          <button onClick={()=>setUser(user==="scott"?"filip":"scott")}
             style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t[user],background:t.card2,border:`1px solid ${t.borderMed}`,
               borderRadius:8,padding:"5px 10px",cursor:"pointer"}}>{user.toUpperCase()} ↔</button>
         </div></div></div>
@@ -1392,19 +1792,34 @@ export default function FC30App() {
         onMidnight={()=>setShowMidnight(true)} crossTap={crossTap} onStreak={(d: number)=>setStreakMs(d)} onMilestone={(n: number)=>setMileMs(n)}/>}
       {tab==="week"&&<WeekTab D={D} mutate={mutate} user={user} wk={weekView} setWk={setWeekView} t={t} crossTap={crossTap}/>}
       {tab==="growth"&&<GrowthTab D={D} mutate={mutate} user={user} t={t} crossTap={crossTap}/>}
+      {tab==="verse"&&<MemoryVerseTab D={D} mutate={mutate} user={user} t={t}/>}
       {tab==="history"&&<HistoryTab D={D} mutate={mutate} t={t} brave={brave} onBrave={toggleBrave}/>}
     </div>
     {/* Bottom Tabs */}
     <div style={{position:"fixed",bottom:0,left:0,right:0,zIndex:50,background:t.tabBg,backdropFilter:"blur(12px)",
       borderTop:`1px solid ${t.border}`,display:"flex",padding:"6px 0 env(safe-area-inset-bottom, 8px)"}}>
-      {[{id:"track",icon:"⚔️",label:"Track"},{id:"week",icon:"📅",label:"This Week"},
-        {id:"growth",icon:"🌱",label:"Growth"},{id:"history",icon:"📜",label:"History"}].map(tb=>
+      {[{id:"track",icon:"⚔️",label:"Track"},{id:"week",icon:"📅",label:"Week"},
+        {id:"verse",icon:"📖",label:"Verse"},{id:"growth",icon:"🌱",label:"Growth"},{id:"history",icon:"📜",label:"History"}].map(tb=>
         <button key={tb.id} onClick={()=>setTab(tb.id)}
           style={{flex:1,background:"none",border:"none",cursor:"pointer",padding:"8px 0",textAlign:"center"}}>
           <div style={{fontSize:20,marginBottom:2,opacity:tab===tb.id?1:.5}}>{tb.icon}</div>
           <div style={{fontFamily:FB,fontSize:11,fontWeight:tab===tb.id?700:400,color:tab===tb.id?t.gold:t.muted}}>{tb.label}</div>
         </button>)}</div>
   </div>
+}
+
+// Favicon - Shield with Cross
+const FAVICON_SVG = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0d89a"/><stop offset="100%" stop-color="#b8932e"/></linearGradient><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#1c1c22"/><stop offset="100%" stop-color="#111114"/></linearGradient></defs><path d="M32 2L6 14v18c0 16 11 24 26 28 15-4 26-12 26-28V14L32 2z" fill="url(#b)" stroke="url(#g)" stroke-width="2.5"/><path d="M32 2L6 14v18c0 16 11 24 26 28 15-4 26-12 26-28V14L32 2z" fill="none" stroke="#d4ad5e" stroke-width="1" opacity="0.3" transform="translate(0,1)"/><rect x="29" y="16" width="6" height="30" rx="1.5" fill="url(#g)"/><rect x="19" y="22" width="26" height="6" rx="1.5" fill="url(#g)"/></svg>')}`
+
+function useFavicon() {
+  useEffect(() => {
+    let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement
+    if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link) }
+    link.href = FAVICON_SVG
+    link.type = 'image/svg+xml'
+    // Also set the page title
+    document.title = 'FC30 — Hold the Line'
+  }, [])
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1414,11 +1829,14 @@ const CSS = `
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 body{overscroll-behavior:none}
 input,textarea,button{font-family:'Source Sans 3',system-ui,sans-serif}
-@keyframes celRing{0%{transform:scale(0.5);opacity:1}50%{opacity:0.6}100%{transform:scale(2);opacity:0}}
-@keyframes p0{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-20px,-22px) scale(0);opacity:0}}
-@keyframes p1{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(18px,-20px) scale(0);opacity:0}}
-@keyframes p2{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(-18px,20px) scale(0);opacity:0}}
-@keyframes p3{0%{transform:translate(-50%,-50%) scale(1)}100%{transform:translate(20px,18px) scale(0);opacity:0}}
+@keyframes celRing{0%{transform:scale(0.5);opacity:1}40%{opacity:0.7}100%{transform:scale(2.2);opacity:0}}
+@keyframes celRing2{0%{transform:scale(0.3);opacity:0.8}100%{transform:scale(2.8);opacity:0}}
+@keyframes celGlow{0%{opacity:0.6;transform:scale(0.8)}50%{opacity:0.3}100%{opacity:0;transform:scale(2.5)}}
+@keyframes particleFly{0%{transform:translate(-50%,-50%) scale(1.2);opacity:1}30%{opacity:1}100%{transform:translate(calc(-50% + var(--px)),calc(-50% + var(--py))) scale(0);opacity:0}}
+@keyframes sparkFly0{0%{opacity:1;transform:translate(-50%,-50%) rotate(45deg) scaleY(1)}100%{opacity:0;transform:translate(calc(-50% - 14px),calc(-50% - 14px)) rotate(45deg) scaleY(2.5)}}
+@keyframes sparkFly1{0%{opacity:1;transform:translate(-50%,-50%) rotate(135deg) scaleY(1)}100%{opacity:0;transform:translate(calc(-50% + 14px),calc(-50% - 14px)) rotate(135deg) scaleY(2.5)}}
+@keyframes sparkFly2{0%{opacity:1;transform:translate(-50%,-50%) rotate(225deg) scaleY(1)}100%{opacity:0;transform:translate(calc(-50% - 14px),calc(-50% + 14px)) rotate(225deg) scaleY(2.5)}}
+@keyframes sparkFly3{0%{opacity:1;transform:translate(-50%,-50%) rotate(315deg) scaleY(1)}100%{opacity:0;transform:translate(calc(-50% + 14px),calc(-50% + 14px)) rotate(315deg) scaleY(2.5)}}
 @keyframes fadeIn{0%{opacity:0}100%{opacity:1}}
 @keyframes slideDown{0%{transform:translateX(-50%) translateY(-20px);opacity:0}100%{transform:translateX(-50%) translateY(0);opacity:1}}
 @keyframes lionPulse{0%{transform:scale(.5);opacity:0}50%{transform:scale(1.1);opacity:1}100%{transform:scale(1);opacity:1}}
