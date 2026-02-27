@@ -436,14 +436,24 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes,onTogPosted}: a
 
   const PostedCircle=({who,sz=20}: {who:string,sz?:number})=>{
     const posted=!!task.comp?.[`posted_${who}`]; const isMe=user===who
-    return <button onClick={()=>isMe&&onTogPosted?.(task.id,who)} disabled={!isMe}
-      style={{width:sz,height:sz,borderRadius:sz,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
-        background:posted?t.greenDim:"transparent",border:`1.5px solid ${posted?t.greenBright:t.borderMed}`,
-        cursor:isMe?"pointer":"default",opacity:isMe?1:0.6}}>
-      <span style={{fontSize:sz*.45,color:posted?t.greenBright:t.mutedDark,fontWeight:700}}>{posted?"✓":"○"}</span></button>
+    return <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+      <button onClick={()=>isMe&&onTogPosted?.(task.id,who)} disabled={!isMe}
+        style={{width:sz,height:sz,borderRadius:sz,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+          background:posted?t.greenDim:"transparent",border:`1.5px solid ${posted?t.greenBright:t.borderMed}`,
+          cursor:isMe?"pointer":"default",opacity:isMe?1:0.6}}>
+        <span style={{fontSize:sz*.45,color:posted?t.greenBright:t.mutedDark,fontWeight:700}}>{posted?"✓":"○"}</span></button>
+      <span style={{fontFamily:FB,fontSize:8,fontWeight:700,color:t.mutedDark,letterSpacing:0.3}}>POST</span>
+    </div>
   }
+  const DoneLabel=({children}: any)=>hasPost?<div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:1}}>
+    {children}<span style={{fontFamily:FB,fontSize:8,fontWeight:700,color:t.mutedDark,letterSpacing:0.3}}>DONE</span></div>:children
 
-  const content = <Card t={t} style={{opacity:allDone?.6:1,borderColor:allDone?`${t.green}44`:undefined}} glow={null}>
+  const content = <Card t={t} style={{
+    borderColor:allDone?`${t.green}66`:undefined,
+    boxShadow:allDone?`0 0 12px ${t.green}33, inset 0 0 12px ${t.green}11`:undefined,
+    background:allDone?`linear-gradient(135deg, ${t.card}, ${t.green}0a)`:undefined,
+    animation:allDone?"doneShimmer 3s ease-in-out infinite":undefined
+  }} glow={null}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
       {isXt?<div style={{display:"flex",alignItems:"center",gap:4}}>
         <button onClick={()=>onXtimes(task.id,"scott",-1)} disabled={user!=="scott"} style={{width:22,height:22,borderRadius:6,
@@ -459,12 +469,12 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes,onTogPosted}: a
         <DailyMiniChecks task={task} who="scott" user={user} dayNum={dayNum} wk={wk} t={t} onToggle={onToggle}/>
         {hasPost&&<div style={{display:"flex",justifyContent:"center"}}><PostedCircle who="scott" sz={18}/></div>}</div>
       :<div style={{display:"flex",alignItems:"center",gap:4}}>
-        <StatIcon done={!!task.comp?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&onToggle(task.id,"scott")}/>
+        <DoneLabel><StatIcon done={!!task.comp?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&onToggle(task.id,"scott")}/></DoneLabel>
         {hasPost&&<PostedCircle who="scott" sz={20}/>}</div>}
       <div style={{textAlign:"center",flex:1,padding:"0 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
           <div style={{cursor:"pointer"}} onClick={()=>onEdit?.(task)}>
-            <div style={{fontFamily:FB,fontSize:15,fontWeight:600,color:t.cream,textDecoration:allDone?"line-through":"none"}}>{task.name}</div>
+            <div style={{fontFamily:FB,fontSize:15,fontWeight:600,color:allDone?t.greenBright:t.cream}}>{allDone?"✨ ":""}{task.name}</div>
           </div>
           {hasExtra&&<button onClick={(e)=>{e.stopPropagation();setExpanded(!expanded)}}
             style={{background:"none",border:"none",color:t.muted,fontSize:10,cursor:"pointer",padding:"2px 4px",
@@ -493,7 +503,7 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes,onTogPosted}: a
         {hasPost&&<div style={{display:"flex",justifyContent:"center"}}><PostedCircle who="filip" sz={18}/></div>}</div>
       :<div style={{display:"flex",alignItems:"center",gap:4}}>
         {hasPost&&<PostedCircle who="filip" sz={20}/>}
-        <StatIcon done={!!task.comp?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&onToggle(task.id,"filip")}/></div>}
+        <DoneLabel><StatIcon done={!!task.comp?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&onToggle(task.id,"filip")}/></DoneLabel></div>}
     </div>
     {expanded&&<div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${t.border}`}}>
       {task.choices&&task.choices.length>0&&<div style={{marginBottom:task.notes?8:0}}>
@@ -925,16 +935,29 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
   const sDailies=[dc.bible?.scott,dc.devotional?.scott,dc.journal?.scott].filter(Boolean).length
   const fDailies=[dc.bible?.filip,dc.devotional?.filip,dc.journal?.filip].filter(Boolean).length
   const calcWkPct=(u: string)=>{let done=0,tot=0
-    if(w.verse?.text){tot++;if(w.verse?.[u])done++}if(w.whisper?.text){tot++;if(w.whisper?.[u])done++}
+    const vHasPost=w.verse?.postReq&&w.verse.postReq!=="none"
+    if(w.verse?.text){tot++;if(w.verse?.[u]){done+=vHasPost?(w.verse?.[`posted_${u}`]?1:0.5):1}}
+    const whHasPost=w.whisper?.postReq&&w.whisper.postReq!=="none"
+    if(w.whisper?.text){tot++;if(w.whisper?.[u]){done+=whHasPost?(w.whisper?.[`posted_${u}`]?1:0.5):1}}
     if(w.wkTarget>0){tot++;done+=Math.min(1,(w.workouts?.[u]||[]).length/w.wkTarget)}
-    if(w.miTarget>0){tot++;done+=Math.min(1,(w.mileage?.[u]||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)/w.miTarget)}
+    const entries=(w.mileage?.[u]||[])
+    const totalMi=entries.reduce((s: number,m: any)=>s+calcEquiv(m),0)
+    const outdoorMi=entries.filter((m: any)=>m.outdoor).reduce((s: number,m: any)=>s+calcEquiv(m),0)
+    if(w.miTarget>0){tot++;done+=Math.min(1,totalMi/w.miTarget)}
+    if(w.miOutMin>0){tot++;done+=Math.min(1,outdoorMi/w.miOutMin)}
     ;(w.tasks||[]).forEach((tk: any)=>{if(tk.assignee&&tk.assignee!=="both"&&tk.assignee!==u)return;tot++
-      const c=tk.comp?.[u];if(tk.type==="xtimes"){if((c||0)>=(tk.target||1))done++}else if(c)done++})
+      const c=tk.comp?.[u];const hp=tk.postReq&&tk.postReq!=="none";const posted=!!tk.comp?.[`posted_${u}`]
+      if(tk.type==="xtimes"){const met=(c||0)>=(tk.target||1);if(met)done+=hp?(posted?1:0.5):1}
+      else if(c){done+=hp?(posted?1:0.5):1}})
     return tot>0?Math.round((done/tot)*100):0}
 
   const sortedTasks=[...(w.tasks||[])].sort((a: any,b: any)=>{
-    const aDone=a.type==="xtimes"?(a.comp?.[user]||0)>=(a.target||1):a.type==="daily"?false:!!a.comp?.[user]
-    const bDone=b.type==="xtimes"?(b.comp?.[user]||0)>=(b.target||1):b.type==="daily"?false:!!b.comp?.[user]
+    const aHasPost=a.postReq&&a.postReq!=="none"
+    const bHasPost=b.postReq&&b.postReq!=="none"
+    const aTaskDone=a.type==="xtimes"?(a.comp?.[user]||0)>=(a.target||1):a.type==="daily"?false:!!a.comp?.[user]
+    const bTaskDone=b.type==="xtimes"?(b.comp?.[user]||0)>=(b.target||1):b.type==="daily"?false:!!b.comp?.[user]
+    const aDone=aTaskDone&&(!aHasPost||!!a.comp?.[`posted_${user}`])
+    const bDone=bTaskDone&&(!bHasPost||!!b.comp?.[`posted_${user}`])
     if(aDone!==bDone)return aDone?1:-1;return(a.order||0)-(b.order||0)})
 
   const isWed=d4d(dayNum).getDay()===3&&new Date().getHours()>=17
@@ -1097,7 +1120,11 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     {/* Program Tasks */}
     {(D.progTasks||[]).length>0&&<><SH icon="🏆" t={t}>Full Program Tasks</SH>
       {(D.progTasks||[]).map((task: any)=>{const isDone=task.type==="xtimes"?(task.comp?.[user]||0)>=(task.target||1):!!task.comp?.[user]
-        return <Card key={task.id} t={t} style={{opacity:isDone?.6:1,borderColor:isDone?`${t.green}44`:undefined}}>
+        return <Card key={task.id} t={t} style={{
+          borderColor:isDone?`${t.green}66`:undefined,
+          boxShadow:isDone?`0 0 12px ${t.green}33, inset 0 0 12px ${t.green}11`:undefined,
+          background:isDone?`linear-gradient(135deg, ${t.card}, ${t.green}0a)`:undefined,
+          animation:isDone?"doneShimmer 3s ease-in-out infinite":undefined}}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             {task.type==="xtimes"?<span style={{fontFamily:FB,fontSize:13,fontWeight:700,color:t.scott}}>{task.comp?.scott||0}/{task.target}</span>
             :<StatIcon done={!!task.comp?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>togProg(task.id,"scott")}/>}
@@ -1136,11 +1163,20 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
   const maxWk=Math.min(Math.floor(dn(today())/7)+1,10)
 
   const calcWkPct=(u: string)=>{let done=0,tot=0
-    if(w.verse?.text){tot++;if(w.verse?.[u])done++}if(w.whisper?.text){tot++;if(w.whisper?.[u])done++}
+    const vHasPost=w.verse?.postReq&&w.verse.postReq!=="none"
+    if(w.verse?.text){tot++;if(w.verse?.[u]){done+=vHasPost?(w.verse?.[`posted_${u}`]?1:0.5):1}}
+    const whHasPost=w.whisper?.postReq&&w.whisper.postReq!=="none"
+    if(w.whisper?.text){tot++;if(w.whisper?.[u]){done+=whHasPost?(w.whisper?.[`posted_${u}`]?1:0.5):1}}
     if(w.wkTarget>0){tot++;done+=Math.min(1,(w.workouts?.[u]||[]).length/w.wkTarget)}
-    if(w.miTarget>0){tot++;done+=Math.min(1,(w.mileage?.[u]||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)/w.miTarget)}
+    const entries=(w.mileage?.[u]||[])
+    const totalMi=entries.reduce((s: number,m: any)=>s+calcEquiv(m),0)
+    const outdoorMi=entries.filter((m: any)=>m.outdoor).reduce((s: number,m: any)=>s+calcEquiv(m),0)
+    if(w.miTarget>0){tot++;done+=Math.min(1,totalMi/w.miTarget)}
+    if(w.miOutMin>0){tot++;done+=Math.min(1,outdoorMi/w.miOutMin)}
     ;(w.tasks||[]).forEach((tk: any)=>{if(tk.assignee&&tk.assignee!=="both"&&tk.assignee!==u)return;tot++
-      const c=tk.comp?.[u];if(tk.type==="xtimes"){if((c||0)>=(tk.target||1))done++}else if(c)done++})
+      const c=tk.comp?.[u];const hp=tk.postReq&&tk.postReq!=="none";const posted=!!tk.comp?.[`posted_${u}`]
+      if(tk.type==="xtimes"){const met=(c||0)>=(tk.target||1);if(met)done+=hp?(posted?1:0.5):1}
+      else if(c){done+=hp?(posted?1:0.5):1}})
     return tot>0?Math.round((done/tot)*100):0}
 
   const togWkly=(field: string)=>mutate((nd: any)=>{const w2=gw(nd,wk);const was=w2[field]?.[user];w2[field]={...w2[field],[user]:!was}
@@ -1165,8 +1201,13 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
     const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
     if(!task.comp)task.comp={};const key=`posted_${who}`;task.comp[key]=!task.comp[key];return nd})}
   const sortedTasks=[...(w.tasks||[])].sort((a: any,b: any)=>{
-    const aDone=a.type==="xtimes"?(a.comp?.[user]||0)>=(a.target||1):!!a.comp?.[user]
-    const bDone=b.type==="xtimes"?(b.comp?.[user]||0)>=(b.target||1):!!b.comp?.[user];return (aDone?1:0)-(bDone?1:0)})
+    const aHasPost=a.postReq&&a.postReq!=="none"
+    const bHasPost=b.postReq&&b.postReq!=="none"
+    const aTaskDone=a.type==="xtimes"?(a.comp?.[user]||0)>=(a.target||1):!!a.comp?.[user]
+    const bTaskDone=b.type==="xtimes"?(b.comp?.[user]||0)>=(b.target||1):!!b.comp?.[user]
+    const aDone=aTaskDone&&(!aHasPost||!!a.comp?.[`posted_${user}`])
+    const bDone=bTaskDone&&(!bHasPost||!!b.comp?.[`posted_${user}`])
+    return (aDone?1:0)-(bDone?1:0)})
 
   return <div>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"10px 0"}}>
@@ -1250,9 +1291,13 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
       <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream,marginBottom:4}}>Equivalent Mile Conversions:</div>
       <div style={{fontFamily:FB,fontSize:12,color:t.cream2,lineHeight:1.6}}>
         🏃 Running / Walking = 1:1<br/>🚴 Biking ÷ 3 (3 bike mi = 1 equiv)<br/>🏋️ Elliptical ÷ 2 (2 ellip mi = 1 equiv)<br/>🏊 Swimming × 3 (1 swim mi = 3 equiv)</div></div>}
-    <Card t={t}><div style={{display:"flex",gap:12,marginBottom:8}}>
-      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.scott} h={5} label="Scott" t={t}/></div>
-      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.filip} h={5} label="Filip" t={t}/></div></div>
+    <Card t={t}><div style={{display:"flex",gap:12,marginBottom:6}}>
+      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.scott} h={5} label="Scott (equiv)" t={t}/></div>
+      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miTarget} color={t.filip} h={5} label="Filip (equiv)" t={t}/></div>
+    </div><div style={{display:"flex",gap:12,marginBottom:8}}>
+      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.scott||[]).filter((m: any)=>m.outdoor).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miOutMin} color={`${t.scott}88`} h={3} label="Outdoor" t={t}/></div>
+      <div style={{flex:1}}><Prog v={parseFloat(((w.mileage?.filip||[]).filter((m: any)=>m.outdoor).reduce((s: number,m: any)=>s+calcEquiv(m),0)).toFixed(1))} max={w.miOutMin} color={`${t.filip}88`} h={3} label="Outdoor" t={t}/></div>
+    </div>
     <button onClick={()=>setMiSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
       background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>🏃 Log Mileage</button></Card>
     <XDiv t={t} idx={10} onTap={crossTap}/>
@@ -1519,11 +1564,8 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
   const [typePeek,setTypePeek]=useState(false)
   const [peekTimer,setPeekTimer]=useState(0)
   const [variety,setVariety]=useState(0) // 0-3 seed variety for randomizing blanks
-  const [pendingMastery,setPendingMastery]=useState<{mode:string,data?:any}|null>(null)
-  const [refTyped,setRefTyped]=useState("")
-  const [refChecked,setRefChecked]=useState(false)
 
-  const fullText = verse.fullText || ""
+  const fullText = (verse.fullText || "") + (verse.text ? " — " + verse.text : "")
   const words = useMemo(()=>parseWords(fullText),[fullText])
 
   // Seeded shuffle helper: different variety seeds produce different orderings
@@ -1603,7 +1645,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
   },[typePeek])
 
   const resetMode = ()=>{setStage(0);setFlShow(false);setFbSel(null);setFbAns({});setFbChecked(false);setFbCorrect({})
-    setTyped("");setTypeChecked(false);setTypePeek(false);setPeekTimer(0);setVariety(v=>(v+1)%4);setPendingMastery(null);setRefTyped("");setRefChecked(false)}
+    setTyped("");setTypeChecked(false);setTypePeek(false);setPeekTimer(0);setVariety(v=>(v+1)%4)}
   const switchMode = (m: number)=>{setMode(m);resetMode()}
 
   if(!open || !fullText) return null
@@ -1617,7 +1659,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
         <button onClick={onClose} style={{background:"none",border:"none",color:t.cream,fontSize:16,cursor:"pointer",padding:"4px 8px"}}>← Back</button>
         <div style={{textAlign:"center"}}><div style={{fontFamily:FD,fontSize:16,color:t.cream}}>Week {weekNum}</div>
-          <div style={{fontFamily:FB,fontSize:12,color:t.goldText}}>{verse.text}</div></div>
+          <div style={{fontFamily:FB,fontSize:12,color:t.goldText}}>Verse Practice</div></div>
         <div style={{width:50}}/>
       </div>
       <div style={{display:"flex",gap:4}}>
@@ -1632,7 +1674,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
       </div>
     </div>
     {/* Content */}
-    <div style={{flex:1,padding:"16px",overflowY:"auto",position:"relative"}}>
+    <div style={{flex:1,padding:"16px",overflowY:"auto"}}>
       {/* MODE 0: Progressive Word Removal */}
       {mode===0&&<div>
         <div style={{display:"flex",gap:4,marginBottom:16}}>
@@ -1653,7 +1695,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
           {stage<4?<Btn t={t} onClick={()=>setStage(stage+1)}>Next Stage →</Btn>
           :<div style={{display:"flex",gap:8}}>
             <Btn v="secondary" t={t} onClick={()=>{setStage(0);setVariety(v=>(v+1)%4)}}>Try Again</Btn>
-            <Btn t={t} onClick={()=>{setPendingMastery({mode:"progressive"});setRefTyped("");setRefChecked(false)}}>✓ I Got It!</Btn></div>}
+            <Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"progressive")}>✓ I Got It!</Btn></div>}
         </div>
       </div>}
       {/* MODE 1: First Letter Method */}
@@ -1668,7 +1710,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
         </Card>
         <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
           <Btn v="secondary" t={t} onClick={()=>setFlShow(!flShow)}>{flShow?"Hide Verse":"Show Verse"}</Btn>
-          <Btn t={t} onClick={()=>{setPendingMastery({mode:"firstLetters"});setRefTyped("");setRefChecked(false)}}>✓ I've Got It!</Btn>
+          <Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"firstLetters")}>✓ I've Got It!</Btn>
         </div>
       </div>}
       {/* MODE 2: Fill in the Blank */}
@@ -1704,7 +1746,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
               const corr: Record<number,boolean>={}; let allRight=true
               fbData.blanks.forEach(idx=>{const ok=fbAns[idx]?.toLowerCase().replace(/[^a-z0-9'-]/g,"")===words[idx].word.toLowerCase().replace(/[^a-z0-9'-]/g,"");corr[idx]=ok;if(!ok)allRight=false})
               setFbCorrect(corr);setFbChecked(true)
-              if(allRight){setPendingMastery({mode:"fillBlank"});setRefTyped("");setRefChecked(false)}
+              if(allRight) onMasteryUpdate(weekNum,"fillBlank")
             }}>Check Answers</Btn></>
           :<><Btn v="secondary" t={t} onClick={()=>{setFbAns({});setFbSel(null);setFbChecked(false);setFbCorrect({});setVariety(v=>(v+1)%4)}}>Try Again</Btn>
             {Object.values(fbCorrect).every(Boolean)&&
@@ -1713,7 +1755,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
       </div>}
       {/* MODE 3: Type It Out */}
       {mode===3&&<div>
-        <div style={{fontFamily:FD,fontSize:18,color:t.goldText,textAlign:"center",marginBottom:12}}>{verse.text}</div>
+        <div style={{fontFamily:FB,fontSize:13,color:t.muted,textAlign:"center",marginBottom:12}}>Type the full verse including the reference</div>
         {!typeChecked?<>
           {!typePeek&&<div style={{textAlign:"center",marginBottom:12}}>
             <button onClick={()=>setTypePeek(true)} style={{fontFamily:FB,fontSize:12,color:t.muted,background:t.card2,border:`1px solid ${t.borderMed}`,
@@ -1751,44 +1793,11 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
               <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.muted,marginBottom:4}}>CORRECT VERSE:</div>
               <div style={{fontFamily:FD,fontSize:14,fontStyle:"italic",color:t.cream2,lineHeight:1.5}}>{fullText}</div></div>
             {typeResults.pct>=80&&!m.typeOut?.completed&&
-              <div style={{textAlign:"center",marginTop:8}}><Btn t={t} onClick={()=>{setPendingMastery({mode:"typeOut",data:{best:typeResults.pct}});setRefTyped("");setRefChecked(false)}}>✓ Mark Complete</Btn></div>}
+              <div style={{textAlign:"center",marginTop:8}}><Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"typeOut",{best:typeResults.pct})}>✓ Mark Complete</Btn></div>}
           </div>}
           <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12}}>
             <Btn v="secondary" t={t} onClick={()=>{setTyped("");setTypeChecked(false)}}>Try Again</Btn></div>
         </>}
-      </div>}
-      {/* Reference Quiz Overlay - appears after completing any mode */}
-      {pendingMastery&&<div style={{position:"absolute",inset:0,background:t.bg,zIndex:10,display:"flex",flexDirection:"column",
-        justifyContent:"center",padding:24,overflowY:"auto"}}>
-        <div style={{textAlign:"center",marginBottom:20}}>
-          <div style={{fontSize:36,marginBottom:8}}>📍</div>
-          <div style={{fontFamily:FD,fontSize:20,color:t.cream,marginBottom:4}}>What's the reference?</div>
-          <div style={{fontFamily:FB,fontSize:13,color:t.muted}}>Type the book, chapter, and verse</div></div>
-        {!refChecked?<>
-          <Inp value={refTyped} onChange={setRefTyped} placeholder="e.g. Exodus 20:6" t={t}/>
-          <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
-            <Btn v="secondary" t={t} onClick={()=>setPendingMastery(null)}>← Back</Btn>
-            <Btn t={t} onClick={()=>setRefChecked(true)} disabled={!refTyped.trim()}>Check</Btn></div>
-        </>:<>{(()=>{
-          const normalize=(s: string)=>s.toLowerCase().replace(/\s+/g," ").trim()
-          const correct=normalize(verse.text)
-          const attempt=normalize(refTyped)
-          const isCorrect=correct===attempt
-          const isClose=!isCorrect&&levenshtein(correct,attempt)<=3
-          return <div style={{textAlign:"center"}}>
-            <div style={{fontSize:48,marginBottom:8}}>{isCorrect?"✅":isClose?"🤏":"❌"}</div>
-            <div style={{fontFamily:FD,fontSize:20,color:isCorrect?t.greenBright:isClose?t.goldText:t.red,marginBottom:8}}>
-              {isCorrect?"Perfect!":isClose?"Close!":"Not quite"}</div>
-            <div style={{fontFamily:FB,fontSize:14,color:t.cream2,marginBottom:4}}>
-              <span style={{color:t.muted}}>You typed:</span> {refTyped}</div>
-            {!isCorrect&&<div style={{fontFamily:FB,fontSize:14,color:t.cream2,marginBottom:8}}>
-              <span style={{color:t.muted}}>Correct:</span> <span style={{fontWeight:700,color:t.goldText}}>{verse.text}</span></div>}
-            <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
-              {isCorrect?<Btn t={t} onClick={()=>{onMasteryUpdate(weekNum,pendingMastery.mode,pendingMastery.data);setPendingMastery(null);setRefTyped("");setRefChecked(false)}}>✓ Complete!</Btn>
-              :<><Btn v="secondary" t={t} onClick={()=>{setRefTyped("");setRefChecked(false)}}>Try Again</Btn>
-                <Btn v="secondary" t={t} onClick={()=>setPendingMastery(null)}>← Back</Btn></>}
-            </div>
-          </div>})()}</>}
       </div>}
     </div>
   </div>
@@ -2033,4 +2042,5 @@ input,textarea,button{font-family:'Source Sans 3',system-ui,sans-serif}
 @keyframes freedomPulse{0%,100%{text-shadow:0 0 40px rgba(74,138,224,.5)}50%{text-shadow:0 0 60px rgba(74,138,224,.8)}}
 @keyframes urgPulse{0%,100%{opacity:1}50%{opacity:.6}}
 @keyframes goldPulse{0%,100%{border-color:rgba(212,173,94,.2)}50%{border-color:rgba(212,173,94,.4)}}
+@keyframes doneShimmer{0%,100%{box-shadow:0 0 12px rgba(114,191,129,0.2), inset 0 0 12px rgba(114,191,129,0.07)}50%{box-shadow:0 0 18px rgba(114,191,129,0.35), inset 0 0 18px rgba(114,191,129,0.12)}}
 `
