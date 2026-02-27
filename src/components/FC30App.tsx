@@ -283,12 +283,14 @@ function BSheet({open,onClose,title,t,children}: {open:boolean,onClose:()=>void,
 
 function Inp({value,onChange,placeholder,t,type="text",style:s}: {value:string,onChange:(v:string)=>void,placeholder?:string,t:any,type?:string,style?:any}) {
   return <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder}
+    autoCapitalize="sentences" autoCorrect="off" autoComplete="off" spellCheck={false}
     style={{width:"100%",boxSizing:"border-box",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${t.borderMed}`,
       background:t.card2,color:t.cream,fontFamily:FB,fontSize:15,outline:"none",...s}}/>
 }
 
 function TA({value,onChange,placeholder,t,rows=3}: {value:string,onChange:(v:string)=>void,placeholder?:string,t:any,rows?:number}) {
   return <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows}
+    autoCapitalize="sentences" autoCorrect="off" autoComplete="off" spellCheck={false}
     style={{width:"100%",boxSizing:"border-box",padding:"11px 14px",borderRadius:10,border:`1.5px solid ${t.borderMed}`,
       background:t.card2,color:t.cream,fontFamily:FB,fontSize:15,outline:"none",resize:"vertical"}}/>
 }
@@ -417,18 +419,29 @@ function DailyMiniChecks({task,who,user,dayNum,wk,t,onToggle}: any) {
   </div>
 }
 
-function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes}: any) {
+function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes,onTogPosted}: any) {
   const p = user==="scott"?"filip":"scott"
   const isXt = task.type==="xtimes"
   const isDailyType = task.type==="daily"
   const [expanded, setExpanded] = useState(false)
+  const hasPost = task.postReq&&task.postReq!=="none"
   if(task.assignee&&task.assignee!=="both"&&task.assignee!==user&&task.assignee!==p) return null
   let userDone=false, partDone=false
   if(isXt){userDone=(task.comp?.[user]||0)>=(task.target||1);partDone=(task.comp?.[p]||0)>=(task.target||1)}
   else if(isDailyType){const dow=(dayNum-((wk-1)*7));userDone=!!task.comp?.[`${user}_${dow}`];partDone=!!task.comp?.[`${p}_${dow}`]}
   else{userDone=!!task.comp?.[user];partDone=!!task.comp?.[p]}
-  const allDone = userDone&&partDone
+  const userPosted=!!task.comp?.[`posted_${user}`]; const partPosted=!!task.comp?.[`posted_${p}`]
+  const allDone = userDone&&partDone&&(!hasPost||(userPosted&&partPosted))
   const hasExtra = !!(task.notes || (task.choices && task.choices.length > 0))
+
+  const PostedCircle=({who,sz=20}: {who:string,sz?:number})=>{
+    const posted=!!task.comp?.[`posted_${who}`]; const isMe=user===who
+    return <button onClick={()=>isMe&&onTogPosted?.(task.id,who)} disabled={!isMe}
+      style={{width:sz,height:sz,borderRadius:sz,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+        background:posted?t.greenDim:"transparent",border:`1.5px solid ${posted?t.greenBright:t.borderMed}`,
+        cursor:isMe?"pointer":"default",opacity:isMe?1:0.6}}>
+      <span style={{fontSize:sz*.45,color:posted?t.greenBright:t.mutedDark,fontWeight:700}}>{posted?"✓":"○"}</span></button>
+  }
 
   const content = <Card t={t} style={{opacity:allDone?.6:1,borderColor:allDone?`${t.green}44`:undefined}} glow={null}>
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
@@ -440,9 +453,14 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes}: any) {
         <button onClick={()=>onXtimes(task.id,"scott",1)} disabled={user!=="scott"} style={{width:22,height:22,borderRadius:6,
           border:`1px solid ${t.borderMed}`,background:t.card2,color:t.cream,fontSize:13,cursor:user==="scott"?"pointer":"default",
           display:"flex",alignItems:"center",justifyContent:"center",opacity:user!=="scott"?.5:1}}>+</button>
+        {hasPost&&<PostedCircle who="scott" sz={20}/>}
       </div>
-      :isDailyType?<DailyMiniChecks task={task} who="scott" user={user} dayNum={dayNum} wk={wk} t={t} onToggle={onToggle}/>
-      :<StatIcon done={!!task.comp?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&onToggle(task.id,"scott")}/>}
+      :isDailyType?<div style={{display:"flex",flexDirection:"column",gap:3}}>
+        <DailyMiniChecks task={task} who="scott" user={user} dayNum={dayNum} wk={wk} t={t} onToggle={onToggle}/>
+        {hasPost&&<div style={{display:"flex",justifyContent:"center"}}><PostedCircle who="scott" sz={18}/></div>}</div>
+      :<div style={{display:"flex",alignItems:"center",gap:4}}>
+        <StatIcon done={!!task.comp?.scott} sz={24} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&onToggle(task.id,"scott")}/>
+        {hasPost&&<PostedCircle who="scott" sz={20}/>}</div>}
       <div style={{textAlign:"center",flex:1,padding:"0 8px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"center",gap:4}}>
           <div style={{cursor:"pointer"}} onClick={()=>onEdit?.(task)}>
@@ -461,6 +479,7 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes}: any) {
         {isXt&&<div style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>Target: {task.target}×</div>}
       </div>
       {isXt?<div style={{display:"flex",alignItems:"center",gap:4}}>
+        {hasPost&&<PostedCircle who="filip" sz={20}/>}
         <button onClick={()=>onXtimes(task.id,"filip",-1)} disabled={user!=="filip"} style={{width:22,height:22,borderRadius:6,
           border:`1px solid ${t.borderMed}`,background:t.card2,color:t.cream,fontSize:13,cursor:user==="filip"?"pointer":"default",
           display:"flex",alignItems:"center",justifyContent:"center",opacity:user!=="filip"?.5:1}}>−</button>
@@ -469,8 +488,12 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes}: any) {
           border:`1px solid ${t.borderMed}`,background:t.card2,color:t.cream,fontSize:13,cursor:user==="filip"?"pointer":"default",
           display:"flex",alignItems:"center",justifyContent:"center",opacity:user!=="filip"?.5:1}}>+</button>
       </div>
-      :isDailyType?<DailyMiniChecks task={task} who="filip" user={user} dayNum={dayNum} wk={wk} t={t} onToggle={onToggle}/>
-      :<StatIcon done={!!task.comp?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&onToggle(task.id,"filip")}/>}
+      :isDailyType?<div style={{display:"flex",flexDirection:"column",gap:3}}>
+        <DailyMiniChecks task={task} who="filip" user={user} dayNum={dayNum} wk={wk} t={t} onToggle={onToggle}/>
+        {hasPost&&<div style={{display:"flex",justifyContent:"center"}}><PostedCircle who="filip" sz={18}/></div>}</div>
+      :<div style={{display:"flex",alignItems:"center",gap:4}}>
+        {hasPost&&<PostedCircle who="filip" sz={20}/>}
+        <StatIcon done={!!task.comp?.filip} sz={24} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&onToggle(task.id,"filip")}/></div>}
     </div>
     {expanded&&<div style={{marginTop:8,paddingTop:8,borderTop:`1px solid ${t.border}`}}>
       {task.choices&&task.choices.length>0&&<div style={{marginBottom:task.notes?8:0}}>
@@ -537,30 +560,41 @@ function MileageSheet({open,onClose,t,mutate,user,wk}: any) {
 function SetupSheet({open,field,onClose,t,mutate,wk,wkData}: any) {
   const [val,setVal] = useState(""); const [val2,setVal2] = useState(""); const [opts,setOpts] = useState("")
   const [verseBody,setVerseBody] = useState("")
+  const [postReq,setPostReq] = useState("none")
   useEffect(()=>{
-    if(field==="verse") {setVal(wkData?.verse?.text||""); setVerseBody(wkData?.verse?.fullText||"")}
-    if(field==="whisper") setVal(wkData?.whisper?.text||"")
+    if(field==="verse") {setVal(wkData?.verse?.text||""); setVerseBody(wkData?.verse?.fullText||""); setPostReq(wkData?.verse?.postReq||"none")}
+    if(field==="whisper") {setVal(wkData?.whisper?.text||""); setPostReq(wkData?.whisper?.postReq||"none")}
     if(field==="workout"){setOpts((wkData?.wkOpts||[]).join(", "));setVal(String(wkData?.wkTarget||3))}
     if(field==="mileage"){setVal(String(wkData?.miTarget||10));setVal2(String(wkData?.miOutMin||5))}
   },[field,wk,wkData])
   const doSave = () => {
     mutate((nd: any) => {
       const w = gw(nd,wk)
-      if(field==="verse") w.verse={...w.verse,text:val,fullText:verseBody}
-      if(field==="whisper") w.whisper={...w.whisper,text:val}
+      if(field==="verse") w.verse={...w.verse,text:val,fullText:verseBody,postReq}
+      if(field==="whisper") w.whisper={...w.whisper,text:val,postReq}
       if(field==="workout"){w.wkOpts=opts.split(",").map((s: string)=>s.trim()).filter(Boolean);w.wkTarget=parseInt(val)||3}
       if(field==="mileage"){w.miTarget=parseFloat(val)||10;w.miOutMin=parseFloat(val2)||5}
       addLog(nd,{type:"edit",detail:`Updated ${field} for week ${wk}`,date:tds()}); return nd
     }); onClose()
   }
   const titles: any = {verse:"Set Memory Verse",whisper:"Set Whisper Reading",workout:"Workout Setup",mileage:"Mileage Setup"}
+  const PostReqPicker = <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Post requirement</div>
+    <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
+      {[{v:"none",icon:"—",l:"None"},{v:"photo",icon:"📸",l:"Photo"},{v:"writing",icon:"⌨️",l:"Post"},{v:"photoAndWriting",icon:"📸⌨️",l:"Photo + Post"}].map(o=>
+        <button key={o.v} onClick={()=>setPostReq(o.v)} style={{padding:"6px 12px",borderRadius:8,fontFamily:FB,fontSize:12,fontWeight:600,
+          cursor:"pointer",border:`1.5px solid ${postReq===o.v?t.gold:t.borderMed}`,display:"flex",alignItems:"center",gap:4,
+          background:postReq===o.v?t.goldDim:t.card2,color:postReq===o.v?t.goldText:t.cream}}>
+          <span style={{fontSize:13}}>{o.icon}</span>{o.l}</button>)}</div></div>
   return <BSheet open={open} onClose={onClose} title={titles[field]||"Setup"} t={t}>
     {field==="verse"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Verse reference</div>
         <Inp value={val} onChange={setVal} placeholder="e.g. Romans 8:28" t={t}/></div>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Full verse text <span style={{color:t.goldText}}>(for practice)</span></div>
-        <TA value={verseBody} onChange={setVerseBody} placeholder='e.g. "And we know that in all things God works for the good..."' t={t} rows={4}/></div></div>}
-    {field==="whisper"&&<Inp value={val} onChange={setVal} placeholder="e.g. Chapters 3-4" t={t}/>}
+        <TA value={verseBody} onChange={setVerseBody} placeholder='e.g. "And we know that in all things God works for the good..."' t={t} rows={4}/></div>
+      {PostReqPicker}</div>}
+    {field==="whisper"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+      <Inp value={val} onChange={setVal} placeholder="e.g. Chapters 3-4" t={t}/>
+      {PostReqPicker}</div>}
     {field==="workout"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Options (comma-separated)</div>
         <Inp value={opts} onChange={setOpts} placeholder="Upper body, Cardio, Legs" t={t}/></div>
@@ -575,7 +609,7 @@ function SetupSheet({open,field,onClose,t,mutate,wk,wkData}: any) {
 }
 
 function AddTaskSheet({open,onClose,t,mutate,wk}: any) {
-  const [mode,setMode]=useState("create");const [nm,setNm]=useState("");const [sub,setSub]=useState("");const [notes,setNotes]=useState("")
+  const [nm,setNm]=useState("");const [sub,setSub]=useState("");const [notes,setNotes]=useState("")
   const [tp,setTp]=useState("onetime");const [target,setTarget]=useState("3");const [asg,setAsg]=useState("both")
   const [rec,setRec]=useState(false);const [scope,setScope]=useState("this")
   const [selWks,setSelWks]=useState<Record<number,boolean>>({})
@@ -583,24 +617,8 @@ function AddTaskSheet({open,onClose,t,mutate,wk}: any) {
   const [postReq,setPostReq]=useState<string>("none")
   const addChoice=()=>{if(newCh.trim()&&ch.length<3){setCh([...ch,newCh.trim()]);setNewCh("")}}
   const togWkSel=(w: number)=>setSelWks(p=>({...p,[w]:!p[w]}))
-  const reset=()=>{setMode("create");setNm("");setSub("");setNotes("");setTp("onetime");setTarget("3");
+  const reset=()=>{setNm("");setSub("");setNotes("");setTp("onetime");setTarget("3");
     setAsg("both");setRec(false);setScope("this");setSelWks({});setCh([]);setNewCh("");setPostReq("none")}
-  const applyPreset=(p: any)=>{setNm(p.name);setSub(p.subtitle||"");setTp(p.type);setTarget(String(p.target||3));
-    setAsg(p.assignee||"both");setScope(p.scope||"this");setRec(p.recurring||false);setMode("create")}
-  const PRESETS=[
-    {icon:"🏋️",name:"Workout",subtitle:"Hit the gym or exercise",type:"xtimes",target:3,scope:"this",recurring:true},
-    {icon:"📞",name:"Accountability Call",subtitle:"Call your partner",type:"onetime",scope:"this",recurring:true},
-    {icon:"🙏",name:"Extra Prayer Time",subtitle:"Extended prayer session",type:"xtimes",target:2,scope:"this"},
-    {icon:"📕",name:"Book Reading",subtitle:"Read assigned chapters",type:"onetime",scope:"this",recurring:true},
-    {icon:"✍️",name:"Gratitude List",subtitle:"Write 5 things daily",type:"daily",scope:"this"},
-    {icon:"🚫",name:"No Screen Time",subtitle:"Evening screen fast",type:"daily",scope:"this",recurring:true},
-    {icon:"💧",name:"Hydration Goal",subtitle:"Drink 8 glasses",type:"daily",scope:"this"},
-    {icon:"🤝",name:"Serve Someone",subtitle:"Act of service this week",type:"onetime",scope:"this"},
-    {icon:"💬",name:"Share Faith",subtitle:"Have a faith conversation",type:"xtimes",target:1,scope:"this"},
-    {icon:"🏃",name:"Morning Run",subtitle:"Run before 7am",type:"xtimes",target:3,scope:"this"},
-    {icon:"📱",name:"Social Media Fast",subtitle:"No scrolling today",type:"daily",scope:"this",recurring:true},
-    {icon:"🎯",name:"Custom Goal",subtitle:"Set your own target",type:"xtimes",target:5,scope:"this"},
-  ]
   const add=()=>{if(!nm.trim())return
     mutate((nd: any)=>{
       const task: any={id:`t_${Date.now()}`,name:nm.trim(),subtitle:sub.trim(),notes:notes.trim(),type:tp,
@@ -616,25 +634,7 @@ function AddTaskSheet({open,onClose,t,mutate,wk}: any) {
       addLog(nd,{type:"addTask",detail:nm,date:tds()});return nd
     });reset();onClose()}
   return <BSheet open={open} onClose={()=>{reset();onClose()}} title="Add Activity" t={t}>
-    <div style={{display:"flex",gap:6,marginBottom:14}}>
-      <button onClick={()=>setMode("presets")} style={{flex:1,padding:"8px",borderRadius:8,fontFamily:FB,fontSize:13,fontWeight:600,
-        cursor:"pointer",border:`1.5px solid ${mode==="presets"?t.gold:t.borderMed}`,
-        background:mode==="presets"?t.goldDim:"transparent",color:mode==="presets"?t.goldText:t.muted}}>⚡ Quick Add</button>
-      <button onClick={()=>setMode("create")} style={{flex:1,padding:"8px",borderRadius:8,fontFamily:FB,fontSize:13,fontWeight:600,
-        cursor:"pointer",border:`1.5px solid ${mode==="create"?t.gold:t.borderMed}`,
-        background:mode==="create"?t.goldDim:"transparent",color:mode==="create"?t.goldText:t.muted}}>✏️ Custom</button>
-    </div>
-    {mode==="presets"?<div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-      {PRESETS.map((p,i)=><button key={i} onClick={()=>applyPreset(p)}
-        style={{padding:"10px",borderRadius:10,border:`1px solid ${t.borderMed}`,background:t.card2,cursor:"pointer",textAlign:"left"}}>
-        <div style={{fontSize:18,marginBottom:4}}>{p.icon}</div>
-        <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t.cream,lineHeight:1.2}}>{p.name}</div>
-        <div style={{fontFamily:FB,fontSize:10,color:t.muted,marginTop:2}}>{p.subtitle}</div>
-        <div style={{display:"flex",gap:4,marginTop:4}}>
-          <span style={{fontFamily:FB,fontSize:9,color:t.mutedDark,padding:"1px 5px",borderRadius:4,background:t.card}}>{p.type}</span>
-          {p.recurring&&<span style={{fontFamily:FB,fontSize:9,color:t.goldText,padding:"1px 5px",borderRadius:4,background:t.goldDim}}>recurring</span>}
-        </div></button>)}</div>
-    :<div style={{display:"flex",flexDirection:"column",gap:10}}>
+    <div style={{display:"flex",flexDirection:"column",gap:10}}>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Name *</div>
         <Inp value={nm} onChange={setNm} placeholder="e.g. Cold shower, Memorize Psalm 23" t={t}/></div>
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Description</div>
@@ -691,7 +691,7 @@ function AddTaskSheet({open,onClose,t,mutate,wk}: any) {
         <div><div style={{fontFamily:FB,fontSize:13,fontWeight:600,color:rec?t.goldText:t.cream}}>🔁 Repeat weekly</div>
           <div style={{fontFamily:FB,fontSize:10,color:t.muted}}>Auto-add to every week after the selected ones</div></div></label>}
       <Btn t={t} onClick={add} disabled={!nm.trim()} style={{width:"100%",marginTop:4}}>Add Task</Btn>
-    </div>}
+    </div>
   </BSheet>
 }
 
@@ -890,6 +890,8 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     w2[field]={...w2[field],[user]:!cur}
     if(!cur){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user,task:field,date:s})}
     else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,user,field)};return nd})
+  const togWklyPostedTrack=(field: string)=>mutate((nd: any)=>{const w2=gw(nd,wk);const key=`posted_${user}`
+    w2[field]={...w2[field],[key]:!w2[field]?.[key]};return nd})
 
   const togTask=(id: string,who: string,dayIdx?: number)=>mutate((nd: any)=>{
     const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
@@ -907,6 +909,9 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     if(!task.comp)task.comp={scott:0,filip:0};task.comp[who]=Math.max(0,(task.comp[who]||0)+delta)
     if(delta>0){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:s})}
     else if(delta<0){nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)};return nd})}
+  const togPostedTrack=(id: string,who: string)=>{if(who!==user)return;mutate((nd: any)=>{
+    const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
+    if(!task.comp)task.comp={};const key=`posted_${who}`;task.comp[key]=!task.comp[key];return nd})}
 
   const togProg=(id: string,who: string)=>{if(who!==user)return;mutate((nd: any)=>{
     const task=(nd.progTasks||[]).find((x: any)=>x.id===id);if(!task)return nd
@@ -921,8 +926,8 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
   const fDailies=[dc.bible?.filip,dc.devotional?.filip,dc.journal?.filip].filter(Boolean).length
   const calcWkPct=(u: string)=>{let done=0,tot=0
     if(w.verse?.text){tot++;if(w.verse?.[u])done++}if(w.whisper?.text){tot++;if(w.whisper?.[u])done++}
-    if(w.wkTarget>0){tot++;if((w.workouts?.[u]||[]).length>=w.wkTarget)done++}
-    if(w.miTarget>0){tot++;if((w.mileage?.[u]||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)>=w.miTarget)done++}
+    if(w.wkTarget>0){tot++;done+=Math.min(1,(w.workouts?.[u]||[]).length/w.wkTarget)}
+    if(w.miTarget>0){tot++;done+=Math.min(1,(w.mileage?.[u]||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)/w.miTarget)}
     ;(w.tasks||[]).forEach((tk: any)=>{if(tk.assignee&&tk.assignee!=="both"&&tk.assignee!==u)return;tot++
       const c=tk.comp?.[u];if(tk.type==="xtimes"){if((c||0)>=(tk.target||1))done++}else if(c)done++})
     return tot>0?Math.round((done/tot)*100):0}
@@ -1004,19 +1009,57 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
       {w.verse.fullText&&<div style={{fontFamily:FB,fontSize:14,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.6,
         padding:"8px 12px",background:`${t.gold}08`,borderRadius:8,borderLeft:`3px solid ${t.gold}44`}}>&ldquo;{w.verse.fullText}&rdquo;</div>}
       {!w.verse.fullText&&<div style={{fontFamily:FB,fontSize:12,color:t.mutedDark,marginBottom:8}}>Full verse text not added yet — add in Verse tab for practice</div>}
+      {w.verse.postReq&&w.verse.postReq!=="none"&&<div style={{display:"inline-flex",alignItems:"center",gap:3,
+        marginBottom:8,padding:"2px 8px",borderRadius:6,background:`${t.gold}18`,border:`1px solid ${t.gold}33`}}>
+        <span style={{fontSize:11}}>{w.verse.postReq==="photo"?"📸":w.verse.postReq==="writing"?"⌨️":"📸⌨️"}</span>
+        <span style={{fontFamily:FB,fontSize:9,fontWeight:700,color:t.goldText,letterSpacing:0.5}}>
+          {w.verse.postReq==="photo"?"PHOTO":w.verse.postReq==="writing"?"POST":"PHOTO + POST"}</span></div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
+          {w.verse.postReq&&w.verse.postReq!=="none"&&<button onClick={()=>user==="scott"&&togWklyPostedTrack("verse")} disabled={user!=="scott"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.verse?.posted_scott?t.greenDim:"transparent",border:`1.5px solid ${w.verse?.posted_scott?t.greenBright:t.borderMed}`,
+              cursor:user==="scott"?"pointer":"default",opacity:user==="scott"?1:0.6}}>
+            <span style={{fontSize:10,color:w.verse?.posted_scott?t.greenBright:t.mutedDark,fontWeight:700}}>{w.verse?.posted_scott?"✓":"○"}</span></button>}
+        </div>
         <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Memorized?</span>
-        <StatIcon done={!!w.verse?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {w.verse.postReq&&w.verse.postReq!=="none"&&<button onClick={()=>user==="filip"&&togWklyPostedTrack("verse")} disabled={user!=="filip"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.verse?.posted_filip?t.greenDim:"transparent",border:`1.5px solid ${w.verse?.posted_filip?t.greenBright:t.borderMed}`,
+              cursor:user==="filip"?"pointer":"default",opacity:user==="filip"?1:0.6}}>
+            <span style={{fontSize:10,color:w.verse?.posted_filip?t.greenBright:t.mutedDark,fontWeight:700}}>{w.verse?.posted_filip?"✓":"○"}</span></button>}
+          <StatIcon done={!!w.verse?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
+        </div>
       </div></Card>
     :<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No verse set this week</div>}
     {/* Whisper */}
     <SH icon="📚" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("whisper")}>{w.whisper?.text?"Edit":"+ Set"}</Btn>}>Whisper Reading</SH>
     {w.whisper?.text?<Card t={t}><div style={{fontFamily:FB,fontSize:15,color:t.cream2,marginBottom:8}}>{w.whisper.text}</div>
+      {w.whisper.postReq&&w.whisper.postReq!=="none"&&<div style={{display:"inline-flex",alignItems:"center",gap:3,
+        marginBottom:8,padding:"2px 8px",borderRadius:6,background:`${t.gold}18`,border:`1px solid ${t.gold}33`}}>
+        <span style={{fontSize:11}}>{w.whisper.postReq==="photo"?"📸":w.whisper.postReq==="writing"?"⌨️":"📸⌨️"}</span>
+        <span style={{fontFamily:FB,fontSize:9,fontWeight:700,color:t.goldText,letterSpacing:0.5}}>
+          {w.whisper.postReq==="photo"?"PHOTO":w.whisper.postReq==="writing"?"POST":"PHOTO + POST"}</span></div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.whisper?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <StatIcon done={!!w.whisper?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
+          {w.whisper.postReq&&w.whisper.postReq!=="none"&&<button onClick={()=>user==="scott"&&togWklyPostedTrack("whisper")} disabled={user!=="scott"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.whisper?.posted_scott?t.greenDim:"transparent",border:`1.5px solid ${w.whisper?.posted_scott?t.greenBright:t.borderMed}`,
+              cursor:user==="scott"?"pointer":"default",opacity:user==="scott"?1:0.6}}>
+            <span style={{fontSize:10,color:w.whisper?.posted_scott?t.greenBright:t.mutedDark,fontWeight:700}}>{w.whisper?.posted_scott?"✓":"○"}</span></button>}
+        </div>
         <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Complete?</span>
-        <StatIcon done={!!w.whisper?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {w.whisper.postReq&&w.whisper.postReq!=="none"&&<button onClick={()=>user==="filip"&&togWklyPostedTrack("whisper")} disabled={user!=="filip"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.whisper?.posted_filip?t.greenDim:"transparent",border:`1.5px solid ${w.whisper?.posted_filip?t.greenBright:t.borderMed}`,
+              cursor:user==="filip"?"pointer":"default",opacity:user==="filip"?1:0.6}}>
+            <span style={{fontSize:10,color:w.whisper?.posted_filip?t.greenBright:t.mutedDark,fontWeight:700}}>{w.whisper?.posted_filip?"✓":"○"}</span></button>}
+          <StatIcon done={!!w.whisper?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
+        </div>
       </div></Card>
     :<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
     <XDiv t={t} idx={2} onTap={crossTap}/>
@@ -1050,7 +1093,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     {/* Weekly Tasks */}
     {sortedTasks.length>0&&<><SH icon="📋" t={t}>Weekly Tasks</SH>
       {sortedTasks.map((task: any)=><TaskRow key={task.id} task={task} user={user} t={t} dayNum={dayNum} wk={wk}
-        onToggle={togTask} onEdit={setEditT} onXtimes={xtTask}/>)}</>}
+        onToggle={togTask} onEdit={setEditT} onXtimes={xtTask} onTogPosted={togPostedTrack}/>)}</>}
     {/* Program Tasks */}
     {(D.progTasks||[]).length>0&&<><SH icon="🏆" t={t}>Full Program Tasks</SH>
       {(D.progTasks||[]).map((task: any)=>{const isDone=task.type==="xtimes"?(task.comp?.[user]||0)>=(task.target||1):!!task.comp?.[user]
@@ -1094,8 +1137,8 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
 
   const calcWkPct=(u: string)=>{let done=0,tot=0
     if(w.verse?.text){tot++;if(w.verse?.[u])done++}if(w.whisper?.text){tot++;if(w.whisper?.[u])done++}
-    if(w.wkTarget>0){tot++;if((w.workouts?.[u]||[]).length>=w.wkTarget)done++}
-    if(w.miTarget>0){tot++;if((w.mileage?.[u]||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)>=w.miTarget)done++}
+    if(w.wkTarget>0){tot++;done+=Math.min(1,(w.workouts?.[u]||[]).length/w.wkTarget)}
+    if(w.miTarget>0){tot++;done+=Math.min(1,(w.mileage?.[u]||[]).reduce((s: number,m: any)=>s+calcEquiv(m),0)/w.miTarget)}
     ;(w.tasks||[]).forEach((tk: any)=>{if(tk.assignee&&tk.assignee!=="both"&&tk.assignee!==u)return;tot++
       const c=tk.comp?.[u];if(tk.type==="xtimes"){if((c||0)>=(tk.target||1))done++}else if(c)done++})
     return tot>0?Math.round((done/tot)*100):0}
@@ -1103,6 +1146,8 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
   const togWkly=(field: string)=>mutate((nd: any)=>{const w2=gw(nd,wk);const was=w2[field]?.[user];w2[field]={...w2[field],[user]:!was}
     if(!was){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user,task:field,date:tds()})}
     else{nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,user,field)};return nd})
+  const togWklyPosted=(field: string)=>mutate((nd: any)=>{const w2=gw(nd,wk);const key=`posted_${user}`
+    w2[field]={...w2[field],[key]:!w2[field]?.[key]};return nd})
   const togTask=(id: string,who: string,dayIdx?: number)=>{if(who!==user)return;mutate((nd: any)=>{
     const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
     if(!task.comp)task.comp={};if(task.type==="daily"&&dayIdx!==undefined){const k=`${who}_${dayIdx}`;const was=task.comp[k];task.comp[k]=!was
@@ -1116,6 +1161,9 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
     if(!task.comp)task.comp={scott:0,filip:0};task.comp[who]=Math.max(0,(task.comp[who]||0)+delta)
     if(delta>0){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user:who,task:task.name,date:tds()})}
     else if(delta<0){nd.total=Math.max(0,(nd.total||0)-1);removeLog(nd,who,task.name)};return nd})}
+  const togPosted=(id: string,who: string)=>{if(who!==user)return;mutate((nd: any)=>{
+    const w2=gw(nd,wk);const task=w2.tasks.find((x: any)=>x.id===id);if(!task)return nd
+    if(!task.comp)task.comp={};const key=`posted_${who}`;task.comp[key]=!task.comp[key];return nd})}
   const sortedTasks=[...(w.tasks||[])].sort((a: any,b: any)=>{
     const aDone=a.type==="xtimes"?(a.comp?.[user]||0)>=(a.target||1):!!a.comp?.[user]
     const bDone=b.type==="xtimes"?(b.comp?.[user]||0)>=(b.target||1):!!b.comp?.[user];return (aDone?1:0)-(bDone?1:0)})
@@ -1138,17 +1186,55 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
       {w.verse.fullText&&<div style={{fontFamily:FB,fontSize:14,fontStyle:"italic",color:t.cream2,marginBottom:8,lineHeight:1.6,
         padding:"8px 12px",background:`${t.gold}08`,borderRadius:8,borderLeft:`3px solid ${t.gold}44`}}>&ldquo;{w.verse.fullText}&rdquo;</div>}
       {!w.verse.fullText&&<div style={{fontFamily:FB,fontSize:12,color:t.mutedDark,marginBottom:8}}>Add full verse text in Verse tab for practice</div>}
+      {w.verse.postReq&&w.verse.postReq!=="none"&&<div style={{display:"inline-flex",alignItems:"center",gap:3,
+        marginBottom:8,padding:"2px 8px",borderRadius:6,background:`${t.gold}18`,border:`1px solid ${t.gold}33`}}>
+        <span style={{fontSize:11}}>{w.verse.postReq==="photo"?"📸":w.verse.postReq==="writing"?"⌨️":"📸⌨️"}</span>
+        <span style={{fontFamily:FB,fontSize:9,fontWeight:700,color:t.goldText,letterSpacing:0.5}}>
+          {w.verse.postReq==="photo"?"PHOTO":w.verse.postReq==="writing"?"POST":"PHOTO + POST"}</span></div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <StatIcon done={!!w.verse?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("verse")}/>
+          {w.verse.postReq&&w.verse.postReq!=="none"&&<button onClick={()=>user==="scott"&&togWklyPosted("verse")} disabled={user!=="scott"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.verse?.posted_scott?t.greenDim:"transparent",border:`1.5px solid ${w.verse?.posted_scott?t.greenBright:t.borderMed}`,
+              cursor:user==="scott"?"pointer":"default",opacity:user==="scott"?1:0.6}}>
+            <span style={{fontSize:10,color:w.verse?.posted_scott?t.greenBright:t.mutedDark,fontWeight:700}}>{w.verse?.posted_scott?"✓":"○"}</span></button>}
+        </div>
         <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Memorized?</span>
-        <StatIcon done={!!w.verse?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {w.verse.postReq&&w.verse.postReq!=="none"&&<button onClick={()=>user==="filip"&&togWklyPosted("verse")} disabled={user!=="filip"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.verse?.posted_filip?t.greenDim:"transparent",border:`1.5px solid ${w.verse?.posted_filip?t.greenBright:t.borderMed}`,
+              cursor:user==="filip"?"pointer":"default",opacity:user==="filip"?1:0.6}}>
+            <span style={{fontSize:10,color:w.verse?.posted_filip?t.greenBright:t.mutedDark,fontWeight:700}}>{w.verse?.posted_filip?"✓":"○"}</span></button>}
+          <StatIcon done={!!w.verse?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("verse")}/>
+        </div>
       </div></Card>:<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No verse set</div>}
     <SH icon="📚" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("whisper")}>{w.whisper?.text?"Edit":"+ Set"}</Btn>}>Whisper Reading</SH>
     {w.whisper?.text?<Card t={t}><div style={{fontFamily:FB,fontSize:15,color:t.cream2,marginBottom:8}}>{w.whisper.text}</div>
+      {w.whisper.postReq&&w.whisper.postReq!=="none"&&<div style={{display:"inline-flex",alignItems:"center",gap:3,
+        marginBottom:8,padding:"2px 8px",borderRadius:6,background:`${t.gold}18`,border:`1px solid ${t.gold}33`}}>
+        <span style={{fontSize:11}}>{w.whisper.postReq==="photo"?"📸":w.whisper.postReq==="writing"?"⌨️":"📸⌨️"}</span>
+        <span style={{fontFamily:FB,fontSize:9,fontWeight:700,color:t.goldText,letterSpacing:0.5}}>
+          {w.whisper.postReq==="photo"?"PHOTO":w.whisper.postReq==="writing"?"POST":"PHOTO + POST"}</span></div>}
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-        <StatIcon done={!!w.whisper?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          <StatIcon done={!!w.whisper?.scott} sz={28} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togWkly("whisper")}/>
+          {w.whisper.postReq&&w.whisper.postReq!=="none"&&<button onClick={()=>user==="scott"&&togWklyPosted("whisper")} disabled={user!=="scott"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.whisper?.posted_scott?t.greenDim:"transparent",border:`1.5px solid ${w.whisper?.posted_scott?t.greenBright:t.borderMed}`,
+              cursor:user==="scott"?"pointer":"default",opacity:user==="scott"?1:0.6}}>
+            <span style={{fontSize:10,color:w.whisper?.posted_scott?t.greenBright:t.mutedDark,fontWeight:700}}>{w.whisper?.posted_scott?"✓":"○"}</span></button>}
+        </div>
         <span style={{fontFamily:FB,fontSize:13,color:t.muted}}>Complete?</span>
-        <StatIcon done={!!w.whisper?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
+        <div style={{display:"flex",alignItems:"center",gap:4}}>
+          {w.whisper.postReq&&w.whisper.postReq!=="none"&&<button onClick={()=>user==="filip"&&togWklyPosted("whisper")} disabled={user!=="filip"}
+            style={{width:22,height:22,borderRadius:22,display:"flex",alignItems:"center",justifyContent:"center",padding:0,
+              background:w.whisper?.posted_filip?t.greenDim:"transparent",border:`1.5px solid ${w.whisper?.posted_filip?t.greenBright:t.borderMed}`,
+              cursor:user==="filip"?"pointer":"default",opacity:user==="filip"?1:0.6}}>
+            <span style={{fontSize:10,color:w.whisper?.posted_filip?t.greenBright:t.mutedDark,fontWeight:700}}>{w.whisper?.posted_filip?"✓":"○"}</span></button>}
+          <StatIcon done={!!w.whisper?.filip} sz={28} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togWkly("whisper")}/>
+        </div>
       </div></Card>:<div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,padding:"8px 0"}}>No reading assigned</div>}
     <XDiv t={t} idx={9} onTap={crossTap}/>
     <SH icon="💪" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("workout")}>⚙ Setup</Btn>}>Workouts</SH>
@@ -1172,7 +1258,7 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
     <XDiv t={t} idx={10} onTap={crossTap}/>
     {sortedTasks.length>0&&<><SH icon="📋" t={t}>Weekly Tasks</SH>
       {sortedTasks.map((task: any)=><TaskRow key={task.id} task={task} user={user} t={t} dayNum={dn(today())} wk={wk}
-        onToggle={togTask} onEdit={setEditT} onXtimes={xtTask}/>)}</>}
+        onToggle={togTask} onEdit={setEditT} onXtimes={xtTask} onTogPosted={togPosted}/>)}</>}
     {sortedTasks.length===0&&!w.verse?.text&&!w.whisper?.text&&
       <Card t={t} style={{textAlign:"center",padding:24}}><div style={{fontSize:24,marginBottom:8}}>📋</div>
         <div style={{fontFamily:FB,fontSize:14,color:t.mutedDark,marginBottom:8}}>No tasks yet — set up this week</div>
@@ -1195,6 +1281,7 @@ function WeekTab({D,mutate,user,wk,setWk,t,crossTap}: any) {
 function GrowthTab({D,mutate,user,t,crossTap}: any) {
   const [cArea,setCArea]=useState<string|null>(null);const [cText,setCText]=useState("")
   const [evtSheet,setEvtSheet]=useState(false);const [newEvt,setNewEvt]=useState({title:"",loc:"",date:"",time:""})
+  const [editEvt,setEditEvt]=useState<any>(null)
 
   const adjStrike=(who: string,d: number)=>{if(who!==user)return;mutate((nd: any)=>{
     nd.strikes={...nd.strikes,[who]:Math.max(0,(nd.strikes?.[who]||0)+d)}
@@ -1212,6 +1299,9 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
   const addEvt=()=>{if(!newEvt.title)return;mutate((nd: any)=>{
     nd.events=[...nd.events,{id:`e_${Date.now()}`,...newEvt,scott:false,filip:false}];return nd})
     setNewEvt({title:"",loc:"",date:"",time:""});setEvtSheet(false)}
+  const saveEditEvt=()=>{if(!editEvt)return;mutate((nd: any)=>{
+    nd.events=nd.events.map((e: any)=>e.id===editEvt.id?{...e,title:editEvt.title,loc:editEvt.loc,date:editEvt.date,time:editEvt.time}:e);return nd});setEditEvt(null)}
+  const deleteEvt=(id: string)=>{mutate((nd: any)=>{nd.events=nd.events.filter((e: any)=>e.id!==id);return nd});setEditEvt(null)}
 
   let chapDone=0;for(let d=0;d<BIBLE.length;d++){const s2=ds(d4d(d));if(D.daily?.[s2]?.bible?.[user])chapDone++}
 
@@ -1288,13 +1378,17 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
     <XDiv t={t} idx={7} onTap={crossTap}/>
     <SH icon="📅" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setEvtSheet(true)}>+ Add</Btn>}>Special Events</SH>
     {(D.events||[]).map((evt: any)=><Card key={evt.id} t={t} style={{borderLeft:`3px solid ${t.gold}`}}>
-      <div style={{fontFamily:FD,fontSize:17,fontWeight:600,color:t.cream,marginBottom:4}}>{evt.title}</div>
-      <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:3}}>{evt.date} · {evt.time}</div>
-      <div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,marginBottom:8}}>📍 {evt.loc}</div>
+      <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between"}}>
+        <div style={{flex:1}}>
+          <div style={{fontFamily:FD,fontSize:17,fontWeight:600,color:t.cream,marginBottom:4}}>{evt.title}</div>
+          <div style={{fontFamily:FB,fontSize:13,color:t.muted,marginBottom:3}}>{evt.date} · {evt.time}</div>
+          <div style={{fontFamily:FB,fontSize:13,color:t.mutedDark,marginBottom:4}}>📍 {evt.loc}</div>
+        </div>
+        <button onClick={()=>setEditEvt({...evt})} style={{background:"none",border:"none",color:t.muted,fontSize:14,cursor:"pointer",padding:"4px 8px"}}>✏️</button>
+      </div>
       <div style={{display:"flex",gap:8,marginTop:4}}>
         {["scott","filip"].map(who=>{const status=evt[who];const isMe=user===who
           const isGoing=status==="going"; const isNotGoing=status==="not_going"
-          // Support legacy boolean true = "going"
           const going = isGoing || status===true
           return <button key={who} onClick={()=>isMe&&toggleEvt(evt.id)} disabled={!isMe}
             style={{flex:1,padding:"10px 0",borderRadius:10,cursor:isMe?"pointer":"default",
@@ -1303,6 +1397,7 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
               fontFamily:FB,fontSize:13,fontWeight:700,color:going?t[who]:isNotGoing?t.red:t.muted}}>
             {going?"✓ ":isNotGoing?"✗ ":"○ "}{who==="scott"?"Scott":"Filip"}{going?" — Going":isNotGoing?" — Not Going":" — Not set"}
           </button>})}</div></Card>)}
+    {/* Add Event Sheet */}
     <BSheet open={evtSheet} onClose={()=>setEvtSheet(false)} title="Add Event" t={t}>
       <div style={{display:"flex",flexDirection:"column",gap:10}}>
         <Inp value={newEvt.title} onChange={(v: string)=>setNewEvt({...newEvt,title:v})} placeholder="Event name" t={t}/>
@@ -1310,6 +1405,16 @@ function GrowthTab({D,mutate,user,t,crossTap}: any) {
         <Inp value={newEvt.date} onChange={(v: string)=>setNewEvt({...newEvt,date:v})} placeholder="YYYY-MM-DD" t={t}/>
         <Inp value={newEvt.time} onChange={(v: string)=>setNewEvt({...newEvt,time:v})} placeholder="e.g. 7:00 PM" t={t}/>
         <Btn t={t} onClick={addEvt} style={{width:"100%"}}>Add Event</Btn></div></BSheet>
+    {/* Edit Event Sheet */}
+    <BSheet open={!!editEvt} onClose={()=>setEditEvt(null)} title="Edit Event" t={t}>
+      {editEvt&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
+        <Inp value={editEvt.title} onChange={(v: string)=>setEditEvt({...editEvt,title:v})} placeholder="Event name" t={t}/>
+        <Inp value={editEvt.loc} onChange={(v: string)=>setEditEvt({...editEvt,loc:v})} placeholder="Location" t={t}/>
+        <Inp value={editEvt.date} onChange={(v: string)=>setEditEvt({...editEvt,date:v})} placeholder="YYYY-MM-DD" t={t}/>
+        <Inp value={editEvt.time} onChange={(v: string)=>setEditEvt({...editEvt,time:v})} placeholder="e.g. 7:00 PM" t={t}/>
+        <Btn t={t} onClick={saveEditEvt} style={{width:"100%"}}>Save Changes</Btn>
+        <Btn v="danger" t={t} onClick={()=>deleteEvt(editEvt.id)} style={{width:"100%"}}>🗑 Delete Event</Btn>
+      </div>}</BSheet>
   </div>
 }
 
@@ -1413,9 +1518,22 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
   const [typeChecked,setTypeChecked]=useState(false)
   const [typePeek,setTypePeek]=useState(false)
   const [peekTimer,setPeekTimer]=useState(0)
+  const [variety,setVariety]=useState(0) // 0-3 seed variety for randomizing blanks
+  const [pendingMastery,setPendingMastery]=useState<{mode:string,data?:any}|null>(null)
+  const [refTyped,setRefTyped]=useState("")
+  const [refChecked,setRefChecked]=useState(false)
 
   const fullText = verse.fullText || ""
   const words = useMemo(()=>parseWords(fullText),[fullText])
+
+  // Seeded shuffle helper: different variety seeds produce different orderings
+  const seededShuffle = useCallback((arr: number[], seed: number) => {
+    return arr.slice().sort((a,b)=>{
+      const va = ((a * (7+seed*3) + (3+seed*5)) % (13+seed*2)) + (a*seed)%7
+      const vb = ((b * (7+seed*3) + (3+seed*5)) % (13+seed*2)) + (b*seed)%7
+      return va - vb
+    })
+  },[])
 
   // Progressive: determine which indices to hide at each stage
   const hiddenAt = useMemo(()=>{
@@ -1423,9 +1541,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
     const scored = words.map((w,i)=>({i,common:COMMON_WORDS.has(w.word.toLowerCase())}))
     const nonCommon = scored.filter(x=>!x.common).map(x=>x.i)
     const common = scored.filter(x=>x.common).map(x=>x.i)
-    // Shuffle deterministically using word index as seed
-    const shuffle = (arr: number[]) => arr.slice().sort((a,b)=>((a*7+3)%13)-((b*7+3)%13))
-    const ordered = [...shuffle(nonCommon),...shuffle(common)]
+    const ordered = [...seededShuffle(nonCommon, variety),...seededShuffle(common, variety)]
     const s1 = Math.ceil(words.length*0.25), s2 = Math.ceil(words.length*0.5), s3 = Math.ceil(words.length*0.75)
     return [
       [] as number[],
@@ -1434,22 +1550,26 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
       ordered.slice(0,s3),
       ordered.map((_,i)=>ordered[i]) // all
     ]
-  },[words])
+  },[words,variety,seededShuffle])
 
   // Fill-in-blank: select words to blank and distractors
   const fbData = useMemo(()=>{
     if(!words.length) return {blanks:[],bank:[],distractors:[]}
     const candidates = words.map((w,i)=>({i,w:w.word,common:COMMON_WORDS.has(w.word.toLowerCase())}))
       .filter(x=>!x.common && x.i>0)
-    const selected = candidates.slice().sort((a,b)=>((a.i*11+5)%17)-((b.i*11+5)%17)).slice(0,Math.min(7,Math.max(4,Math.ceil(words.length*0.2))))
+    const selected = candidates.slice().sort((a,b)=>{
+      const va = ((a.i*(11+variety*4)+(5+variety*3))%(17+variety*2))
+      const vb = ((b.i*(11+variety*4)+(5+variety*3))%(17+variety*2))
+      return va-vb
+    }).slice(0,Math.min(7,Math.max(4,Math.ceil(words.length*0.2))))
       .sort((a,b)=>a.i-b.i)
     const blankIndices = selected.map(s=>s.i)
     const correctWords = selected.map(s=>s.w)
     const distractors = ["grace","mercy","peace","truth","spirit","glory","faith","righteousness","salvation","kingdom"]
       .filter(d=>!correctWords.map(c=>c.toLowerCase()).includes(d)).slice(0,3)
-    const bank = [...correctWords,...distractors].sort((a,b)=>((a.charCodeAt(0)*7)%13)-((b.charCodeAt(0)*7)%13))
+    const bank = [...correctWords,...distractors].sort((a,b)=>((a.charCodeAt(0)*(7+variety*2))%(13+variety))-((b.charCodeAt(0)*(7+variety*2))%(13+variety)))
     return {blanks:blankIndices,bank,distractors}
-  },[words])
+  },[words,variety])
 
   // Type-it-out comparison
   const typeResults = useMemo(()=>{
@@ -1483,7 +1603,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
   },[typePeek])
 
   const resetMode = ()=>{setStage(0);setFlShow(false);setFbSel(null);setFbAns({});setFbChecked(false);setFbCorrect({})
-    setTyped("");setTypeChecked(false);setTypePeek(false)}
+    setTyped("");setTypeChecked(false);setTypePeek(false);setPeekTimer(0);setVariety(v=>(v+1)%4);setPendingMastery(null);setRefTyped("");setRefChecked(false)}
   const switchMode = (m: number)=>{setMode(m);resetMode()}
 
   if(!open || !fullText) return null
@@ -1512,7 +1632,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
       </div>
     </div>
     {/* Content */}
-    <div style={{flex:1,padding:"16px",overflowY:"auto"}}>
+    <div style={{flex:1,padding:"16px",overflowY:"auto",position:"relative"}}>
       {/* MODE 0: Progressive Word Removal */}
       {mode===0&&<div>
         <div style={{display:"flex",gap:4,marginBottom:16}}>
@@ -1532,8 +1652,8 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
           {stage>0&&<Btn v="secondary" t={t} onClick={()=>setStage(stage-1)}>← Back</Btn>}
           {stage<4?<Btn t={t} onClick={()=>setStage(stage+1)}>Next Stage →</Btn>
           :<div style={{display:"flex",gap:8}}>
-            <Btn v="secondary" t={t} onClick={()=>setStage(0)}>Try Again</Btn>
-            <Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"progressive")}>✓ I Got It!</Btn></div>}
+            <Btn v="secondary" t={t} onClick={()=>{setStage(0);setVariety(v=>(v+1)%4)}}>Try Again</Btn>
+            <Btn t={t} onClick={()=>{setPendingMastery({mode:"progressive"});setRefTyped("");setRefChecked(false)}}>✓ I Got It!</Btn></div>}
         </div>
       </div>}
       {/* MODE 1: First Letter Method */}
@@ -1548,7 +1668,7 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
         </Card>
         <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
           <Btn v="secondary" t={t} onClick={()=>setFlShow(!flShow)}>{flShow?"Hide Verse":"Show Verse"}</Btn>
-          <Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"firstLetters")}>✓ I've Got It!</Btn>
+          <Btn t={t} onClick={()=>{setPendingMastery({mode:"firstLetters"});setRefTyped("");setRefChecked(false)}}>✓ I've Got It!</Btn>
         </div>
       </div>}
       {/* MODE 2: Fill in the Blank */}
@@ -1584,9 +1704,9 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
               const corr: Record<number,boolean>={}; let allRight=true
               fbData.blanks.forEach(idx=>{const ok=fbAns[idx]?.toLowerCase().replace(/[^a-z0-9'-]/g,"")===words[idx].word.toLowerCase().replace(/[^a-z0-9'-]/g,"");corr[idx]=ok;if(!ok)allRight=false})
               setFbCorrect(corr);setFbChecked(true)
-              if(allRight) onMasteryUpdate(weekNum,"fillBlank")
+              if(allRight){setPendingMastery({mode:"fillBlank"});setRefTyped("");setRefChecked(false)}
             }}>Check Answers</Btn></>
-          :<><Btn v="secondary" t={t} onClick={()=>{setFbAns({});setFbSel(null);setFbChecked(false);setFbCorrect({})}}>Try Again</Btn>
+          :<><Btn v="secondary" t={t} onClick={()=>{setFbAns({});setFbSel(null);setFbChecked(false);setFbCorrect({});setVariety(v=>(v+1)%4)}}>Try Again</Btn>
             {Object.values(fbCorrect).every(Boolean)&&
               <div style={{fontFamily:FB,fontSize:14,fontWeight:700,color:t.greenBright}}>✓ All correct!</div>}</>}
         </div>
@@ -1631,11 +1751,44 @@ function VersePracticeModal({open,onClose,verse,weekNum,t,mastery,onMasteryUpdat
               <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.muted,marginBottom:4}}>CORRECT VERSE:</div>
               <div style={{fontFamily:FD,fontSize:14,fontStyle:"italic",color:t.cream2,lineHeight:1.5}}>{fullText}</div></div>
             {typeResults.pct>=80&&!m.typeOut?.completed&&
-              <div style={{textAlign:"center",marginTop:8}}><Btn t={t} onClick={()=>onMasteryUpdate(weekNum,"typeOut",{best:typeResults.pct})}>✓ Mark Complete</Btn></div>}
+              <div style={{textAlign:"center",marginTop:8}}><Btn t={t} onClick={()=>{setPendingMastery({mode:"typeOut",data:{best:typeResults.pct}});setRefTyped("");setRefChecked(false)}}>✓ Mark Complete</Btn></div>}
           </div>}
           <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:12}}>
             <Btn v="secondary" t={t} onClick={()=>{setTyped("");setTypeChecked(false)}}>Try Again</Btn></div>
         </>}
+      </div>}
+      {/* Reference Quiz Overlay - appears after completing any mode */}
+      {pendingMastery&&<div style={{position:"absolute",inset:0,background:t.bg,zIndex:10,display:"flex",flexDirection:"column",
+        justifyContent:"center",padding:24,overflowY:"auto"}}>
+        <div style={{textAlign:"center",marginBottom:20}}>
+          <div style={{fontSize:36,marginBottom:8}}>📍</div>
+          <div style={{fontFamily:FD,fontSize:20,color:t.cream,marginBottom:4}}>What's the reference?</div>
+          <div style={{fontFamily:FB,fontSize:13,color:t.muted}}>Type the book, chapter, and verse</div></div>
+        {!refChecked?<>
+          <Inp value={refTyped} onChange={setRefTyped} placeholder="e.g. Exodus 20:6" t={t}/>
+          <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
+            <Btn v="secondary" t={t} onClick={()=>setPendingMastery(null)}>← Back</Btn>
+            <Btn t={t} onClick={()=>setRefChecked(true)} disabled={!refTyped.trim()}>Check</Btn></div>
+        </>:<>{(()=>{
+          const normalize=(s: string)=>s.toLowerCase().replace(/\s+/g," ").trim()
+          const correct=normalize(verse.text)
+          const attempt=normalize(refTyped)
+          const isCorrect=correct===attempt
+          const isClose=!isCorrect&&levenshtein(correct,attempt)<=3
+          return <div style={{textAlign:"center"}}>
+            <div style={{fontSize:48,marginBottom:8}}>{isCorrect?"✅":isClose?"🤏":"❌"}</div>
+            <div style={{fontFamily:FD,fontSize:20,color:isCorrect?t.greenBright:isClose?t.goldText:t.red,marginBottom:8}}>
+              {isCorrect?"Perfect!":isClose?"Close!":"Not quite"}</div>
+            <div style={{fontFamily:FB,fontSize:14,color:t.cream2,marginBottom:4}}>
+              <span style={{color:t.muted}}>You typed:</span> {refTyped}</div>
+            {!isCorrect&&<div style={{fontFamily:FB,fontSize:14,color:t.cream2,marginBottom:8}}>
+              <span style={{color:t.muted}}>Correct:</span> <span style={{fontWeight:700,color:t.goldText}}>{verse.text}</span></div>}
+            <div style={{display:"flex",gap:8,justifyContent:"center",marginTop:16}}>
+              {isCorrect?<Btn t={t} onClick={()=>{onMasteryUpdate(weekNum,pendingMastery.mode,pendingMastery.data);setPendingMastery(null);setRefTyped("");setRefChecked(false)}}>✓ Complete!</Btn>
+              :<><Btn v="secondary" t={t} onClick={()=>{setRefTyped("");setRefChecked(false)}}>Try Again</Btn>
+                <Btn v="secondary" t={t} onClick={()=>setPendingMastery(null)}>← Back</Btn></>}
+            </div>
+          </div>})()}</>}
       </div>}
     </div>
   </div>
@@ -1831,6 +1984,29 @@ function useFavicon() {
     if (!link) { link = document.createElement('link'); link.rel = 'icon'; document.head.appendChild(link) }
     link.href = FAVICON_SVG
     link.type = 'image/svg+xml'
+    // Apple touch icon - generate PNG via canvas for iOS home screen
+    const canvas = document.createElement('canvas')
+    canvas.width = 180; canvas.height = 180
+    const ctx = canvas.getContext('2d')
+    if(ctx){
+      const img = new Image()
+      img.onload = () => {
+        ctx.fillStyle = '#111114'
+        ctx.fillRect(0,0,180,180)
+        ctx.drawImage(img, 22, 16, 136, 148)
+        const pngUrl = canvas.toDataURL('image/png')
+        let appleLink = document.querySelector("link[rel='apple-touch-icon']") as HTMLLinkElement
+        if(!appleLink){ appleLink = document.createElement('link'); appleLink.rel = 'apple-touch-icon'; document.head.appendChild(appleLink) }
+        appleLink.href = pngUrl
+      }
+      img.src = FAVICON_SVG
+    }
+    // Apple web app meta tags
+    if(!document.querySelector("meta[name='apple-mobile-web-app-capable']")){
+      const m1 = document.createElement('meta'); m1.name = 'apple-mobile-web-app-capable'; m1.content = 'yes'; document.head.appendChild(m1)
+      const m2 = document.createElement('meta'); m2.name = 'apple-mobile-web-app-status-bar-style'; m2.content = 'black-translucent'; document.head.appendChild(m2)
+      const m3 = document.createElement('meta'); m3.name = 'apple-mobile-web-app-title'; m3.content = 'FC30'; document.head.appendChild(m3)
+    }
     // Also set the page title
     document.title = 'FC30 — Hold the Line'
   }, [])
