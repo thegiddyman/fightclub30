@@ -1568,6 +1568,7 @@ function HistoryTab({D,mutate,t,brave,onBrave}: any) {
     bRef.current=setTimeout(()=>setBTaps(0),2000);if(n>=5){onBrave();setBTaps(0)}}
 
   const maxWk = Math.min(Math.floor(dn(today())/7)+1,10)
+  const log=(D.log||[]).filter((e: any)=>{
     if(filter!=="all"&&e.user!==filter)return false
     if(typeF!=="all"&&e.type!==typeF)return false
     if(wkF!=="all"){const eWk=wn(new Date(e.time));if(eWk!==parseInt(wkF))return false};return true})
