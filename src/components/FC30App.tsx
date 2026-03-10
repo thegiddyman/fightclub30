@@ -47,7 +47,7 @@ const EVENTS_INIT = [
 const NEH = "Remember the Lord who is great and awesome and fight for your brothers your sons your daughters your wives and your homes".split(" ")
 
 // Date helpers
-const dn = (d: Date) => { const x = new Date(d); x.setHours(0,0,0,0); const s = new Date(START); s.setHours(0,0,0,0); return Math.floor((x.getTime()-s.getTime())/DAYMS) }
+const dn = (d: Date) => { const x = new Date(d); x.setHours(12,0,0,0); const s = new Date(START); s.setHours(12,0,0,0); return Math.floor((x.getTime()-s.getTime())/DAYMS) }
 const wn = (d: Date) => Math.floor(dn(d)/7)+1
 const d4d = (n: number) => { const d = new Date(START); d.setDate(d.getDate()+n); return d }
 const ds = (d: Date) => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
