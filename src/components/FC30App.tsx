@@ -618,7 +618,7 @@ function DailyMiniChecks({task,who,user,dayNum,wk,t,onToggle}: any) {
   </div>
 }
 
-function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes,onTogPosted}: any) {
+function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes,onTogPosted,onGrace}: any) {
   const p = user==="scott"?"filip":"scott"
   const isXt = task.type==="xtimes"
   const isDailyType = task.type==="daily"
