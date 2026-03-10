@@ -349,22 +349,30 @@ function UBadge({hrs,type="daily",t}: {hrs:number,type?:string,t:any}) {
     animation:crit?"urgPulse 1.5s ease infinite":"none"}}>⏱ {label}</span>
 }
 
-function SwipeRow({children,onComplete,done,t}: {children:any,onComplete?:()=>void,done:boolean,t:any}) {
-  const startX = useRef(0); const [dx,setDx] = useState(0); const [undo,setUndo] = useState(false)
+function SwipeRow({children,onComplete,onGrace,done,t}: {children:any,onComplete?:()=>void,onGrace?:()=>void,done:boolean,t:any}) {
+  const startX = useRef(0); const [dx,setDx] = useState(0); const [ldx,setLdx] = useState(0); const [undo,setUndo] = useState(false)
   const undoTimer = useRef<any>(null)
-  const onTS = (e: any) => { if(done) return; startX.current = e.touches[0].clientX }
-  const onTM = (e: any) => { if(done) return; const d = Math.max(0,e.touches[0].clientX-startX.current); setDx(Math.min(d,120)) }
+  const onTS = (e: any) => { startX.current = e.touches[0].clientX }
+  const onTM = (e: any) => {
+    const raw = e.touches[0].clientX - startX.current
+    if(raw > 0 && !done) setDx(Math.min(raw, 120))
+    else if(raw < 0) setLdx(Math.min(-raw, 80))
+  }
   const onTE = () => {
     if(dx>80){ onComplete?.(); setUndo(true); if(undoTimer.current) clearTimeout(undoTimer.current); undoTimer.current=setTimeout(()=>setUndo(false),3500) }
-    setDx(0)
+    if(ldx>55){ onGrace?.() }
+    setDx(0); setLdx(0)
   }
   const doUndo = () => { if(undoTimer.current) clearTimeout(undoTimer.current); setUndo(false); onComplete?.() }
   return <div style={{position:"relative",overflow:"hidden",borderRadius:14,marginBottom:8}}>
     <div style={{position:"absolute",inset:0,background:t.green,borderRadius:14,display:"flex",alignItems:"center",paddingLeft:16,
       opacity:dx>0?.8:0,transition:dx>0?"none":"opacity 0.3s"}}>
       <span style={{color:"#fff",fontFamily:FB,fontSize:13,fontWeight:700}}>✓ Complete</span></div>
+    <div style={{position:"absolute",inset:0,background:"rgba(80,100,180,0.85)",borderRadius:14,display:"flex",alignItems:"center",justifyContent:"flex-end",paddingRight:16,
+      opacity:ldx>0?Math.min(ldx/55,1)*.85:0,transition:ldx>0?"none":"opacity 0.3s"}}>
+      <span style={{color:"#fff",fontFamily:FB,fontSize:13,fontWeight:700}}>✨ Grace</span></div>
     <div onTouchStart={onTS} onTouchMove={onTM} onTouchEnd={onTE}
-      style={{transform:`translateX(${dx}px)`,transition:dx>0?"none":"transform 0.3s",position:"relative",zIndex:1}}>{children}</div>
+      style={{transform:`translateX(${dx-ldx}px)`,transition:(dx>0||ldx>0)?"none":"transform 0.3s",position:"relative",zIndex:1}}>{children}</div>
     {undo&&<div style={{position:"fixed",bottom:80,left:"50%",transform:"translateX(-50%)",zIndex:200,
       padding:"10px 20px",borderRadius:10,background:t.card,border:`1px solid ${t.borderMed}`,boxShadow:"0 4px 20px rgba(0,0,0,0.3)",display:"flex",alignItems:"center",gap:10}}>
       <span style={{fontFamily:FB,fontSize:13,color:t.cream2}}>Marked complete</span>
@@ -434,6 +442,137 @@ function StreakOverlay({days,show,onDone,t}: {days:number,show:boolean,onDone:()
     <div style={{fontFamily:FD,fontSize:days>=70?32:24,color:days>=70?t.goldBright:t.cream,
       textShadow:days>=70?`0 0 30px ${t.gold}`:"none",marginBottom:8}}>{msg}</div>
     <div style={{fontFamily:FB,fontSize:16,color:t.goldText}}>{days} day streak</div></div></Overlay>
+}
+
+function ArmorOverlay({show,onDone,t}: {show:boolean,onDone:()=>void,t:any}) {
+  const pieces = [["⛑️","Helmet of Salvation"],["🛡️","Shield of Faith"],["⚔️","Sword of the Spirit"],["👟","Gospel of Peace"],["🎗️","Belt of Truth"],["🦺","Breastplate of Righteousness"]]
+  return <Overlay show={show} onDone={onDone} ms={5000}>
+    <div style={{textAlign:"center",padding:"20px 28px"}}>
+      <div style={{fontFamily:FB,fontSize:10,fontWeight:700,color:t.goldText,letterSpacing:2,marginBottom:14}}>EPHESIANS 6:10–18</div>
+      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:16,textAlign:"left"}}>
+        {pieces.map((p,i)=><div key={i} style={{display:"flex",alignItems:"center",gap:10,animation:`fadeIn 0.5s ${i*0.5}s both`}}>
+          <span style={{fontSize:22,width:30,textAlign:"center"}}>{p[0]}</span>
+          <span style={{fontFamily:FB,fontSize:13,color:t.cream}}>{p[1]}</span>
+        </div>)}
+      </div>
+      <div style={{fontFamily:FD,fontSize:15,color:t.gold,fontStyle:"italic"}}>"Put on the full armor of God."</div>
+    </div>
+  </Overlay>
+}
+function IronSharpensOverlay({show,onDone,t}: {show:boolean,onDone:()=>void,t:any}) {
+  return <Overlay show={show} onDone={onDone} ms={3500}>
+    <div style={{textAlign:"center",padding:24}}>
+      <div style={{fontSize:48,marginBottom:14,letterSpacing:4}}>⚔️🔥⚔️</div>
+      <div style={{fontFamily:FD,fontSize:24,color:t.goldBright,marginBottom:10}}>Iron Sharpens Iron</div>
+      <div style={{fontFamily:FB,fontSize:13,color:t.cream2,maxWidth:260,margin:"0 auto",lineHeight:1.7,fontStyle:"italic"}}>
+        "As iron sharpens iron, so one man sharpens another."</div>
+      <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginTop:8}}>— Proverbs 27:17</div>
+    </div>
+  </Overlay>
+}
+function JoshuaOverlay({show,onDone,t}: {show:boolean,onDone:()=>void,t:any}) {
+  return <Overlay show={show} onDone={onDone} ms={4000}>
+    <div style={{textAlign:"center",padding:20}}>
+      <div style={{fontSize:64,marginBottom:14,animation:"lionPulse 1s ease"}}>⚔️</div>
+      <div style={{fontFamily:FD,fontSize:30,color:t.goldBright,textShadow:`0 0 30px ${t.gold}`,marginBottom:4,letterSpacing:3}}>BE STRONG</div>
+      <div style={{fontFamily:FD,fontSize:22,color:t.cream,marginBottom:16}}>AND COURAGEOUS</div>
+      <div style={{fontFamily:FB,fontSize:13,color:t.cream2,maxWidth:260,margin:"0 auto",lineHeight:1.7,fontStyle:"italic"}}>
+        "Do not be afraid; do not be discouraged, for the LORD your God will be with you wherever you go."</div>
+      <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginTop:8}}>— Joshua 1:9</div>
+    </div>
+  </Overlay>
+}
+function GideonOverlay({show,onDone,t}: {show:boolean,onDone:()=>void,t:any}) {
+  return <Overlay show={show} onDone={onDone} ms={4500}>
+    <div style={{textAlign:"center",padding:20}}>
+      <div style={{fontSize:40,marginBottom:10}}>🔥🏺📯</div>
+      <div style={{fontFamily:FD,fontSize:60,color:t.goldBright,animation:"freedomPulse 2s ease infinite",marginBottom:4}}>300</div>
+      <div style={{fontFamily:FD,fontSize:15,color:t.cream,marginBottom:14}}>tasks completed — Gideon's Army</div>
+      <div style={{fontFamily:FB,fontSize:13,color:t.cream2,maxWidth:260,margin:"0 auto",lineHeight:1.7,fontStyle:"italic"}}>
+        "With these 300 men I will save you and give the Midianites into your hands."</div>
+      <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginTop:8}}>— Judges 7:7</div>
+    </div>
+  </Overlay>
+}
+function StillSmallOverlay({show,onDone}: {show:boolean,onDone:()=>void}) {
+  return <Overlay show={show} onDone={onDone} ms={5000}>
+    <div style={{textAlign:"center",padding:"48px 32px",maxWidth:320}}>
+      <div style={{fontFamily:"Georgia,'Times New Roman',serif",fontSize:23,color:"rgba(255,255,255,0.92)",lineHeight:1.9,fontStyle:"italic",marginBottom:24}}>
+        "After the fire came a gentle whisper."
+      </div>
+      <div style={{fontFamily:"Georgia,'Times New Roman',serif",fontSize:12,color:"rgba(255,255,255,0.35)",letterSpacing:1}}>1 Kings 19:12</div>
+    </div>
+  </Overlay>
+}
+function Neh52Overlay({show,onDone,t}: {show:boolean,onDone:()=>void,t:any}) {
+  return <Overlay show={show} onDone={onDone} ms={4500}>
+    <div style={{textAlign:"center",padding:20}}>
+      <div style={{fontFamily:FD,fontSize:76,color:t.goldBright,textShadow:`0 0 40px ${t.gold}`,marginBottom:6}}>52</div>
+      <div style={{fontFamily:FD,fontSize:20,color:t.cream,marginBottom:14}}>The Wall is Complete</div>
+      <div style={{fontFamily:FB,fontSize:13,color:t.cream2,maxWidth:260,margin:"0 auto",lineHeight:1.7,fontStyle:"italic"}}>
+        "So the wall was completed... in fifty-two days. When all our enemies heard about this, they lost their self-confidence."</div>
+      <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginTop:8}}>— Nehemiah 6:15–16</div>
+    </div>
+  </Overlay>
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FUNNY BUTTON OVERLAYS
+// ═══════════════════════════════════════════════════════════════
+function SkipLegDayOverlay({show,onDone}: {show:boolean,onDone:()=>void}) {
+  return <Overlay show={show} onDone={onDone} ms={3000}>
+    <div style={{textAlign:"center",padding:24}}>
+      <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:72,color:"#e84040",textShadow:"0 0 30px rgba(232,64,64,0.6)",marginBottom:8,animation:"lionPulse 0.4s ease"}}>DENIED</div>
+      <div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:13,color:"rgba(255,255,255,0.7)",marginBottom:4}}>A warrior does not skip leg day.</div>
+      <div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:11,color:"rgba(255,255,255,0.35)",fontStyle:"italic",marginTop:12}}>— Sun Tzu, probably</div>
+    </div>
+  </Overlay>
+}
+function DeclareVictoryOverlay({show,onDone,t}: {show:boolean,onDone:()=>void,t:any}) {
+  const [phase,setPhase] = useState(0)
+  useEffect(()=>{
+    if(!show){setPhase(0);return}
+    const t1=setTimeout(()=>setPhase(1),2200)
+    const t2=setTimeout(()=>setPhase(2),2800)
+    return ()=>{clearTimeout(t1);clearTimeout(t2)}
+  },[show])
+  return <Overlay show={show} onDone={onDone} ms={5500}>
+    <div style={{textAlign:"center",padding:28}}>
+      <div style={{fontSize:48,marginBottom:12}}>🏆</div>
+      <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:32,color:t.goldBright,textShadow:`0 0 30px ${t.gold}`,letterSpacing:3,marginBottom:6}}>VICTORY</div>
+      <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:20,color:t.goldBright,letterSpacing:2,marginBottom:24}}>DECLARED.</div>
+      {phase>=1&&<div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:12,color:"rgba(255,255,255,0.5)",fontStyle:"italic",animation:"fadeIn 0.4s ease",marginBottom:4}}>
+        ...The enemy has been notified.</div>}
+      {phase>=2&&<div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:12,color:"rgba(255,255,255,0.5)",fontStyle:"italic",animation:"fadeIn 0.4s ease"}}>
+        They respectfully disagree.</div>}
+    </div>
+  </Overlay>
+}
+function SmiteToast({show,onDone,target,t}: {show:boolean,onDone:()=>void,target:string,t:any}) {
+  return <Toast show={show} onDone={onDone} ms={3500} t={t}>
+    <div style={{textAlign:"center",padding:"4px 0"}}>
+      <div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:13,color:t.cream,marginBottom:4}}>
+        ⚡ Smite request for <span style={{color:t[target],fontWeight:700}}>{target[0].toUpperCase()+target.slice(1)}</span> submitted.</div>
+      <div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:11,color:t.muted,fontStyle:"italic"}}>Processing time: 3–5 business days.</div>
+    </div>
+  </Toast>
+}
+function ReinforcementsOverlay({show,onDone,t}: {show:boolean,onDone:()=>void,t:any}) {
+  const [phase,setPhase] = useState(0)
+  useEffect(()=>{
+    if(!show){setPhase(0);return}
+    const t1=setTimeout(()=>setPhase(1),1800)
+    const t2=setTimeout(()=>setPhase(2),3200)
+    return ()=>{clearTimeout(t1);clearTimeout(t2)}
+  },[show])
+  return <Overlay show={show} onDone={onDone} ms={5500}>
+    <div style={{textAlign:"center",padding:28}}>
+      <div style={{fontSize:40,marginBottom:16,animation:"lionPulse 1s ease"}}>🪖</div>
+      <div style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:20,color:t.cream,marginBottom:20}}>Reinforcements dispatched.</div>
+      {phase>=1&&<div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:14,color:"rgba(255,255,255,0.4)",fontStyle:"italic",animation:"fadeIn 0.4s ease",marginBottom:8}}>...</div>}
+      {phase>=2&&<div style={{fontFamily:"'Source Sans 3',system-ui,sans-serif",fontSize:13,color:t.goldText,animation:"fadeIn 0.4s ease"}}>They said you don't need them. 🤙</div>}
+    </div>
+  </Overlay>
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -586,7 +725,7 @@ function TaskRow({task,user,t,dayNum,wk,onToggle,onEdit,onXtimes,onTogPosted}: a
     </div>}
   </Card>
 
-  if(!isXt&&!isDailyType&&hasTaskComp) return <SwipeRow done={userDone} t={t} onComplete={()=>onToggle(task.id,user)}>{content}</SwipeRow>
+  if(!isXt&&!isDailyType&&hasTaskComp) return <SwipeRow done={userDone} t={t} onComplete={()=>onToggle(task.id,user)} onGrace={onGrace}>{content}</SwipeRow>
   return content
 }
 
@@ -683,12 +822,20 @@ function SetupSheet({open,field,onClose,t,mutate,wk,wkData,user}: any) {
       <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Full verse text <span style={{color:t.goldText}}>(for practice)</span></div>
         <TA value={verseBody} onChange={setVerseBody} placeholder='e.g. "And we know that in all things God works for the good..."' t={t} rows={3}/></div>
       {PostReqPicker}
-      <div style={{height:1,background:t.border,margin:"4px 0"}}/>
-      <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[user],marginBottom:2}}>✏️ Your Personal Verse <span style={{fontWeight:400,color:t.muted}}>(optional override)</span></div>
-      <div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Your reference</div>
-        <Inp value={myVerseRef} onChange={setMyVerseRef} placeholder="Leave blank to use shared verse" t={t}/></div>
-      {myVerseRef.trim()&&<div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Your verse text</div>
-        <TA value={myVerseBody} onChange={setMyVerseBody} placeholder="Full text for your verse practice" t={t} rows={3}/></div>}
+      <div style={{height:1,background:t.border,margin:"8px 0"}}/>
+      <div style={{padding:"10px 12px",borderRadius:10,background:`${t[user]}0f`,border:`1.5px solid ${t[user]}44`,marginBottom:4}}>
+        <div style={{fontFamily:FB,fontSize:12,fontWeight:700,color:t[user],marginBottom:4}}>
+          {user==="scott"?"⚔️ Scott's":"🛡️ Filip's"} Personal Verse
+          <span style={{fontWeight:400,color:t.muted,fontSize:11}}> — overrides shared for practice</span>
+        </div>
+        <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginBottom:8}}>
+          Leave blank to use the shared verse above
+        </div>
+        <div style={{marginBottom:8}}><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Your reference (e.g. John 3:16)</div>
+          <Inp value={myVerseRef} onChange={setMyVerseRef} placeholder="Leave blank to use shared verse" t={t}/></div>
+        {myVerseRef.trim()&&<div><div style={{fontFamily:FB,fontSize:12,color:t.muted,marginBottom:4}}>Your verse text (for practice)</div>
+          <TA value={myVerseBody} onChange={setMyVerseBody} placeholder="Full text for your verse practice" t={t} rows={3}/></div>}
+      </div>
     </div>}
     {field==="whisper"&&<div style={{display:"flex",flexDirection:"column",gap:10}}>
       <Inp value={val} onChange={setVal} placeholder="e.g. Chapters 3-4" t={t}/>
@@ -987,6 +1134,23 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
   const [wkSheet,setWkSheet]=useState(false);const [miSheet,setMiSheet]=useState(false);const [addSheet,setAddSheet]=useState(false)
   const [editT,setEditT]=useState<any>(null);const [setupF,setSetupF]=useState<string|null>(null);const [planSheet,setPlanSheet]=useState(false)
   const [showMiInfo,setShowMiInfo]=useState(false)
+  // Easter egg state
+  const streakTapRef=useRef<any>(null);const [streakTaps,setStreakTaps]=useState(0);const [showIronSharpens,setShowIronSharpens]=useState(false)
+  const dateTapRef=useRef<any>(null);const [dateTaps,setDateTaps]=useState(0);const [showCountdown,setShowCountdown]=useState(false)
+  const [showNeh52,setShowNeh52]=useState(false);const [showGrace,setShowGrace]=useState(false);const [showNightWatch,setShowNightWatch]=useState(false)
+  const [wkStatMsg,setWkStatMsg]=useState<string|null>(null)
+  const handleStreakTap=()=>{const n=streakTaps+1;setStreakTaps(n);if(streakTapRef.current)clearTimeout(streakTapRef.current);streakTapRef.current=setTimeout(()=>setStreakTaps(0),2000);if(n>=3){setShowIronSharpens(true);setStreakTaps(0)}}
+  const handleDateTap=()=>{const n=dateTaps+1;setDateTaps(n);if(dateTapRef.current)clearTimeout(dateTapRef.current);dateTapRef.current=setTimeout(()=>setDateTaps(0),1500);if(n>=3){setShowCountdown(true);setDateTaps(0)}}
+  const handleBattleLineTap=(i: number)=>{const tapWk=i+1;const cur=Math.floor(dayNum/7)+1
+    if(tapWk===8&&dayNum===51){setShowNeh52(true);return}
+    if(tapWk>cur){setWkStatMsg(`Week ${tapWk} — Coming soon`);return}
+    const tasks=(D.weeks?.[tapWk]?.tasks||[]).length;const pct=tapWk<cur?"Complete":cur===tapWk?"In Progress":""
+    setWkStatMsg(`Week ${tapWk} — ${pct}${tasks>0?" · "+tasks+" tasks":""}`)}
+  // Funny button state
+  const [showSkipLeg,setShowSkipLeg]=useState(false);const [showDeclareVictory,setShowDeclareVictory]=useState(false)
+  const [showSmite,setShowSmite]=useState(false);const [showReinforcementsOverlay,setShowReinforcementsOverlay]=useState(false)
+  const smiteTarget = user==="scott"?"filip":"scott"
+  const skipLegVisible = useMemo(()=>dayNum%5===2||dayNum%7===4,[dayNum])
   const s=ds(d4d(dayNum));const w=gw(D,wk);const p=user==="scott"?"filip":"scott";const dc=gd(D,s)
   const maxDay=Math.min(dn(today()),69);const hl=hrsLeft(dayNum)
   const bibleChap=dayNum>=0&&dayNum<BIBLE.length?BIBLE[dayNum]:"Rest Day"
@@ -995,7 +1159,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     const dc2=gd(nd,s);const cur=dc2[field]?.[user]||false
     dc2[field]={...dc2[field],[user]:!cur}
     if(!cur){nd.total=(nd.total||0)+1;addLog(nd,{type:"complete",user,task:field,date:s})
-      const now=new Date();if(now.getHours()>=23&&now.getMinutes()>=30) onMidnight?.()
+      const now=new Date();if(now.getHours()>=23&&now.getMinutes()>=30) onMidnight?.();if(now.getHours()===3)setShowNightWatch(true)
       const myAll=dc2.bible?.[user]&&dc2.devotional?.[user]&&dc2.journal?.[user]
       const pAll=dc2.bible?.[p]&&dc2.devotional?.[p]&&dc2.journal?.[p]
       if(myAll&&pAll){brave?onFreedom?.():onLion?.()}
@@ -1076,7 +1240,40 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
 
   const isWed=d4d(dayNum).getDay()===3&&new Date().getHours()>=17
 
+  const daysLeft = 69 - dayNum
   return <div>
+    <IronSharpensOverlay show={showIronSharpens} onDone={()=>setShowIronSharpens(false)} t={t}/>
+    <SkipLegDayOverlay show={showSkipLeg} onDone={()=>setShowSkipLeg(false)}/>
+    <DeclareVictoryOverlay show={showDeclareVictory} onDone={()=>setShowDeclareVictory(false)} t={t}/>
+    <SmiteToast show={showSmite} onDone={()=>setShowSmite(false)} target={smiteTarget} t={t}/>
+    <ReinforcementsOverlay show={showReinforcementsOverlay} onDone={()=>setShowReinforcementsOverlay(false)} t={t}/>
+    <Neh52Overlay show={showNeh52} onDone={()=>setShowNeh52(false)} t={t}/>
+    {showCountdown&&<div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,0,0.85)",animation:"fadeIn 0.3s ease"}} onClick={()=>setShowCountdown(false)}>
+      <div style={{textAlign:"center",padding:32}}>
+        <div style={{fontFamily:FD,fontSize:72,color:t.goldBright,textShadow:`0 0 40px ${t.gold}`,marginBottom:4}}>{daysLeft}</div>
+        <div style={{fontFamily:FD,fontSize:18,color:t.cream,marginBottom:14}}>days remaining</div>
+        <div style={{fontFamily:FB,fontSize:13,color:t.cream2,fontStyle:"italic",maxWidth:240,margin:"0 auto",lineHeight:1.6}}>
+          "Finish strong. The line holds."</div>
+        <div style={{fontFamily:FB,fontSize:11,color:t.muted,marginTop:20}}>tap to dismiss</div>
+      </div></div>}
+    {showGrace&&<div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(20,30,80,0.92)",animation:"fadeIn 0.3s ease"}} onClick={()=>setShowGrace(false)}>
+      <div style={{textAlign:"center",padding:32,maxWidth:300}}>
+        <div style={{fontSize:40,marginBottom:16}}>✨</div>
+        <div style={{fontFamily:FD,fontSize:22,color:"#a0b8ff",marginBottom:12}}>His mercies are new</div>
+        <div style={{fontFamily:FD,fontSize:22,color:"#a0b8ff",marginBottom:16}}>every morning.</div>
+        <div style={{fontFamily:FB,fontSize:13,color:"rgba(255,255,255,0.6)",fontStyle:"italic",lineHeight:1.7}}>
+          "Great is his faithfulness; his mercies begin afresh each morning."</div>
+        <div style={{fontFamily:FB,fontSize:11,color:"rgba(255,255,255,0.35)",marginTop:12}}>— Lamentations 3:22–23</div>
+      </div></div>}
+    {showNightWatch&&<div style={{position:"fixed",inset:0,zIndex:200,display:"flex",alignItems:"center",justifyContent:"center",background:"rgba(0,0,5,0.95)",animation:"fadeIn 0.5s ease"}} onClick={()=>setShowNightWatch(false)}>
+      <div style={{textAlign:"center",padding:36,maxWidth:300}}>
+        <div style={{fontSize:36,marginBottom:20}}>🌙</div>
+        <div style={{fontFamily:"Georgia,serif",fontSize:16,color:"rgba(200,220,255,0.85)",lineHeight:1.9,fontStyle:"italic",marginBottom:20}}>
+          "He grants sleep to those he loves — but first, the watch is kept."</div>
+        <div style={{fontFamily:"Georgia,serif",fontSize:11,color:"rgba(200,220,255,0.35)",letterSpacing:1}}>Psalm 127:2</div>
+      </div></div>}
+    {wkStatMsg&&<Toast show={!!wkStatMsg} onDone={()=>setWkStatMsg(null)} ms={2000} t={t}>
+      <span style={{fontFamily:FB,fontSize:14,color:t.cream}}>{wkStatMsg}</span></Toast>}
     <SmartBar D={D} user={user} dayNum={dayNum} wk={wk} t={t} brave={brave}/>
     {isWed&&wk<10&&<div onClick={()=>setPlanSheet(true)} style={{margin:"0 0 10px",padding:"12px 16px",background:`linear-gradient(135deg,${t.goldDim},${t.card2})`,
       borderRadius:12,border:`1.5px solid ${t.gold}44`,cursor:"pointer",animation:"goldPulse 3s ease infinite"}}>
@@ -1101,27 +1298,40 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
           </div>})}
         <div style={{textAlign:"center",padding:"0 8px",minWidth:50}}>
           <div style={{fontFamily:FD,fontSize:12,color:t.muted,marginBottom:2}}>DAILY</div>
-          {D.streaks?.[user]>0&&<div style={{fontFamily:FB,fontSize:11,color:t.goldText}}>🔥 {D.streaks[user]}</div>}</div>
+          {D.streaks?.[user]>0&&<div onClick={handleStreakTap} style={{fontFamily:FB,fontSize:11,color:t.goldText,cursor:"pointer",padding:"4px 8px",borderRadius:6}}>🔥 {D.streaks[user]}</div>}</div>
       </div>
       <div style={{display:"flex",gap:8}}>
         <div style={{flex:1}}><Prog v={calcWkPct("scott")} max={100} color={t.scott} h={4} label="Week" t={t}/></div>
         <div style={{flex:1}}><Prog v={calcWkPct("filip")} max={100} color={t.filip} h={4} label="Week" t={t}/></div>
+      </div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8}}>
+        <button onClick={()=>setShowSmite(true)} style={{fontFamily:FB,fontSize:9,color:t.muted,background:"none",
+          border:`1px solid ${t.borderMed}`,borderRadius:5,padding:"3px 8px",cursor:"pointer",opacity:0.5}}>
+          ⚡ Smite {smiteTarget[0].toUpperCase()+smiteTarget.slice(1)}</button>
+        <button onClick={()=>setShowDeclareVictory(true)} style={{fontFamily:FB,fontSize:9,color:t.goldText,
+          background:t.goldDim,border:`1px solid ${t.gold}33`,borderRadius:5,padding:"3px 8px",cursor:"pointer",opacity:0.65}}>
+          🏆 Declare Victory</button>
       </div></Card>
     {/* Day Nav */}
     <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",margin:"10px 0"}}>
       <button onClick={()=>setDayNum(Math.max(0,dayNum-1))} disabled={dayNum<=0}
         style={{background:"none",border:"none",color:dayNum<=0?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>◀</button>
       <div style={{textAlign:"center"}}>
-        <div style={{fontFamily:FD,fontSize:18,color:t.cream}}>{fmt(d4d(dayNum))}</div>
+        <div onClick={handleDateTap} style={{fontFamily:FD,fontSize:18,color:t.cream,cursor:"pointer",padding:"4px 8px",borderRadius:8}}>{fmt(d4d(dayNum))}</div>
         <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center"}}>
           <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Day {dayNum+1} · Week {wk}</span>
-          <UBadge hrs={hl} type="daily" t={t}/></div></div>
+          <UBadge hrs={hl} type="daily" t={t}/></div>
+        {dayNum<maxDay&&<button onClick={()=>setDayNum(maxDay)}
+          style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.gold,background:t.goldDim,border:`1px solid ${t.gold}44`,
+            borderRadius:6,padding:"3px 10px",cursor:"pointer",marginTop:4}}>→ Today</button>}
+      </div>
       <button onClick={()=>setDayNum(Math.min(maxDay,dayNum+1))} disabled={dayNum>=maxDay}
         style={{background:"none",border:"none",color:dayNum>=maxDay?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>▶</button></div>
     {/* Battle Line */}
     <div style={{display:"flex",gap:2,marginBottom:14}}>{Array.from({length:10}).map((_,i)=>{const active=i<wk;const cur=i===wk-1
-      return <div key={i} style={{flex:1,height:4,borderRadius:2,transition:"all 0.3s",
-        background:active?(cur?t.gold:`${t.gold}88`):t.border,boxShadow:cur?`0 0 8px ${t.gold}`:"none"}}/>})}</div>
+      return <div key={i} onClick={()=>handleBattleLineTap(i)}
+        style={{flex:1,height:8,borderRadius:4,transition:"all 0.3s",cursor:"pointer",
+          background:active?(cur?t.gold:`${t.gold}88`):t.border,boxShadow:cur?`0 0 8px ${t.gold}`:"none"}}/>})}</div>
     <XDiv t={t} idx={0} onTap={crossTap}/>
     {/* Daily Essentials */}
     <SH icon="📖" t={t}>Daily Essentials</SH>
@@ -1129,7 +1339,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
       {k:"devotional",l:"Walking with God",sub:"Daily devotional"},
       {k:"journal",l:"Journal",sub:"Write in your notebook"}].map(item=>{
       const bothDone=dc[item.k]?.scott&&dc[item.k]?.filip
-      return <SwipeRow key={item.k} done={!!dc[item.k]?.[user]} t={t} onComplete={()=>togDaily(item.k)}>
+      return <SwipeRow key={item.k} done={!!dc[item.k]?.[user]} t={t} onComplete={()=>togDaily(item.k)} onGrace={()=>setShowGrace(true)}>
         <Card t={t} glow={bothDone?t.greenGlow:null} urgent={hl<=1.5&&!dc[item.k]?.[user]}>
           <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
             <StatIcon done={!!dc[item.k]?.scott} sz={30} tap={user==="scott"} t={t} onTap={()=>user==="scott"&&togDaily(item.k)}/>
@@ -1138,6 +1348,12 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
               <div style={{fontFamily:FB,fontSize:13,color:t.muted}}>{item.sub}</div></div>
             <StatIcon done={!!dc[item.k]?.filip} sz={30} tap={user==="filip"} t={t} onTap={()=>user==="filip"&&togDaily(item.k)}/>
           </div></Card></SwipeRow>})}
+    {dc.bible?.[user]&&dc.devotional?.[user]&&dc.journal?.[user]&&
+      <div style={{display:"flex",justifyContent:"center",margin:"4px 0 10px"}}>
+        <button onClick={()=>setShowReinforcementsOverlay(true)}
+          style={{fontFamily:FB,fontSize:11,color:t.muted,background:"none",border:`1px solid ${t.border}`,borderRadius:8,
+            padding:"5px 14px",cursor:"pointer",fontStyle:"italic",opacity:0.6}}>
+          🪖 Request Reinforcements</button></div>}
     <XDiv t={t} idx={1} onTap={crossTap}/>
     {/* Verse */}
     <SH icon="📜" t={t} right={<Btn v="ghost" sm t={t} onClick={()=>setSetupF("verse")}>{w.verse?.text?"Edit":"+ Set"}</Btn>}>Memory Verse</SH>
@@ -1192,8 +1408,10 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     </div>{w.wkOpts?.length>0&&<div style={{marginBottom:8,display:"flex",flexWrap:"wrap",gap:4}}>
       {w.wkOpts.map((o: string,i: number)=><span key={i} style={{fontFamily:FB,fontSize:12,color:t.muted,padding:"3px 10px",borderRadius:6,background:t.card2}}>{o}</span>)}</div>}
     <button onClick={()=>setWkSheet(true)} style={{width:"100%",padding:"10px",borderRadius:10,border:`1.5px solid ${t.gold}`,
-      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button></Card>
-    {/* Mileage */}
+      background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>💪 Log Workout</button>
+    {skipLegVisible&&<button onClick={()=>setShowSkipLeg(true)} style={{width:"100%",marginTop:6,padding:"7px",borderRadius:8,
+      border:`1px solid ${t.borderMed}`,background:"none",color:t.mutedDark,fontFamily:FB,fontSize:11,cursor:"pointer",fontStyle:"italic",opacity:0.7}}>
+      🦵 Skip Leg Day</button>}</Card>
     <SH icon="🏃" t={t} right={<div style={{display:"flex",gap:4,alignItems:"center"}}>
       <button onClick={()=>setShowMiInfo(!showMiInfo)} style={{background:"none",border:"none",color:t.muted,fontSize:14,cursor:"pointer",padding:"4px"}}>ⓘ</button>
       <Btn v="ghost" sm t={t} onClick={()=>setSetupF("mileage")}>⚙ Setup</Btn></div>}>Mileage</SH>
@@ -1214,7 +1432,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
     {/* Weekly Tasks */}
     {sortedTasks.length>0&&<><SH icon="📋" t={t}>Weekly Tasks</SH>
       {sortedTasks.map((task: any)=><TaskRow key={task.id} task={task} user={user} t={t} dayNum={dayNum} wk={wk}
-        onToggle={togTask} onEdit={setEditT} onXtimes={xtTask} onTogPosted={togPostedTrack}/>)}</>}
+        onToggle={togTask} onEdit={setEditT} onXtimes={xtTask} onTogPosted={togPostedTrack} onGrace={()=>setShowGrace(true)}/>)}</>}
     {/* Program Tasks */}
     {(D.progTasks||[]).length>0&&<><SH icon="🏆" t={t}>Full Program Tasks</SH>
       {(D.progTasks||[]).map((task: any)=>{const isDone=task.type==="xtimes"?(task.comp?.[user]||0)>=(task.target||1):!!task.comp?.[user]
@@ -1972,20 +2190,34 @@ function MemoryVerseTab({D,mutate,user,t}: any) {
           </div>
         </div>
         {/* Shared verse */}
+        {verse.text&&<div style={{fontFamily:FB,fontSize:10,fontWeight:700,color:t.mutedDark,marginBottom:2}}>SHARED VERSE</div>}
         <div style={{fontFamily:FD,fontSize:15,color:t.goldText,marginBottom:2}}>{verse.text}</div>
-        {verse.fullText&&!hasPersonalOverride&&<div style={{fontFamily:FB,fontSize:13,color:t.cream2,lineHeight:1.4,marginBottom:8,
+        {verse.fullText&&<div style={{fontFamily:FB,fontSize:12,color:t.cream2,lineHeight:1.4,marginBottom:8,
           display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any,overflow:"hidden"}}>
           {verse.fullText}</div>}
-        {/* Personal override indicator */}
-        {hasPersonalOverride&&<div style={{padding:"6px 10px",borderRadius:8,background:t.goldDim,border:`1px solid ${t.gold}33`,marginBottom:6}}>
-          <div style={{fontFamily:FB,fontSize:10,fontWeight:700,color:t.goldText,marginBottom:2}}>YOUR VERSE</div>
-          <div style={{fontFamily:FD,fontSize:14,color:t.goldText}}>{myVerse.text}</div>
-          {myVerse.fullText&&<div style={{fontFamily:FB,fontSize:12,color:t.cream2,marginTop:2,lineHeight:1.4,
-            display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical" as any,overflow:"hidden"}}>{myVerse.fullText}</div>}
-        </div>}
-        {partnerHasOverride&&<div style={{padding:"4px 8px",borderRadius:6,background:t.card2,border:`1px solid ${t.border}`,marginBottom:6}}>
-          <div style={{fontFamily:FB,fontSize:10,color:t.mutedDark}}>{partnerName}'s verse: <span style={{color:t.muted}}>{partnerVerse.text}</span></div>
-        </div>}
+        {/* Per-person verse rows */}
+        <div style={{display:"flex",flexDirection:"column",gap:6,marginBottom:10}}>
+          {(["scott","filip"] as const).map(who=>{
+            const whoVerse = getEffectiveVerse(verse, who)
+            const hasOverride = !!verse[`${who}Verse`]?.text
+            const isMe = user===who
+            return <div key={who} style={{display:"flex",alignItems:"center",gap:8,padding:"8px 10px",borderRadius:10,
+              background:isMe?`${t[who]}11`:t.card2,border:`1.5px solid ${hasOverride?t[who]+"55":t.border}`}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t[who],marginBottom:hasOverride?2:0}}>
+                  {who==="scott"?"⚔️ Scott":"🛡️ Filip"}</div>
+                {hasOverride
+                  ?<div style={{fontFamily:FD,fontSize:13,color:t.cream,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{whoVerse.text}</div>
+                  :<div style={{fontFamily:FB,fontSize:11,color:t.mutedDark,fontStyle:"italic"}}>Using shared verse</div>}
+              </div>
+              {isMe&&<button onClick={()=>setEditWk(wk)} style={{fontFamily:FB,fontSize:11,fontWeight:700,
+                color:hasOverride?t[who]:t.gold,background:hasOverride?`${t[who]}15`:t.goldDim,
+                border:`1px solid ${hasOverride?t[who]+"44":t.gold+"44"}`,borderRadius:7,
+                padding:"5px 10px",cursor:"pointer",flexShrink:0,whiteSpace:"nowrap"}}>
+                {hasOverride?"Edit Mine":"Set My Verse"}</button>}
+            </div>
+          })}
+        </div>
         {hasFull?<button onClick={()=>setPracticeWk(wk)} style={{width:"100%",padding:"10px",borderRadius:10,
           border:`1.5px solid ${t.gold}`,background:t.goldDim,color:t.goldText,fontFamily:FB,fontSize:14,fontWeight:700,cursor:"pointer"}}>
           📖 Practice</button>
@@ -2015,6 +2247,28 @@ export default function FC30App() {
   const [showLion,setShowLion] = useState(false);const [showFreedom,setShowFreedom] = useState(false)
   const [showMidnight,setShowMidnight] = useState(false);const [nehWord,setNehWord] = useState<string|null>(null);const [showNeh,setShowNeh] = useState(false)
   const [streakMs,setStreakMs] = useState<number|null>(null);const [mileMs,setMileMs] = useState<number|null>(null)
+  // Easter egg state — header
+  const [swordTaps,setSwordTaps] = useState(0);const swordRef = useRef<any>(null)
+  const [shieldTaps,setShieldTaps] = useState(0);const shieldRef = useRef<any>(null)
+  const longPressRef = useRef<any>(null)
+  const [showJoshua,setShowJoshua] = useState(false);const [showArmor,setShowArmor] = useState(false)
+  const [showStillSmall,setShowStillSmall] = useState(false);const [showGideon,setShowGideon] = useState(false)
+  const prevTotalRef = useRef(0)
+  // Date auto-advance at midnight
+  useEffect(()=>{
+    const id=setInterval(()=>{const cur=Math.max(0,Math.min(dn(today()),69));setDayNum(prev=>cur>prev?cur:prev)},30000)
+    return ()=>clearInterval(id)
+  },[])
+  // Gideon's 300
+  useEffect(()=>{
+    if(!D)return;const total=D.total||0
+    if(prevTotalRef.current>0&&prevTotalRef.current<300&&total>=300)setShowGideon(true)
+    prevTotalRef.current=total
+  },[D?.total])
+  const handleSwordTap=()=>{const n=swordTaps+1;setSwordTaps(n);if(swordRef.current)clearTimeout(swordRef.current);swordRef.current=setTimeout(()=>setSwordTaps(0),2000);if(n>=5){setShowJoshua(true);setSwordTaps(0)}}
+  const handleShieldTap=()=>{const n=shieldTaps+1;setShieldTaps(n);if(shieldRef.current)clearTimeout(shieldRef.current);shieldRef.current=setTimeout(()=>setShieldTaps(0),2000);if(n>=3){setShowArmor(true);setShieldTaps(0)}}
+  const handleSubtitleDown=()=>{longPressRef.current=setTimeout(()=>setShowStillSmall(true),2000)}
+  const handleSubtitleUp=()=>{if(longPressRef.current)clearTimeout(longPressRef.current)}
   useFavicon()
 
   const wk = Math.floor(dayNum/7)+1
@@ -2057,6 +2311,10 @@ export default function FC30App() {
   return <div style={{minHeight:"100vh",background:t.bg,paddingBottom:70}}>
     <style>{CSS}</style>
     <LionRoars show={showLion} onDone={()=>setShowLion(false)} t={t}/>
+    <JoshuaOverlay show={showJoshua} onDone={()=>setShowJoshua(false)} t={t}/>
+    <ArmorOverlay show={showArmor} onDone={()=>setShowArmor(false)} t={t}/>
+    <StillSmallOverlay show={showStillSmall} onDone={()=>setShowStillSmall(false)}/>
+    <GideonOverlay show={showGideon} onDone={()=>setShowGideon(false)} t={t}/>
     <FreedomBanner show={showFreedom} onDone={()=>setShowFreedom(false)}/>
     <Toast show={showNeh} onDone={()=>setShowNeh(false)} t={t}><span style={{fontFamily:FD,fontSize:18,color:t.goldBright}}>&quot;{nehWord}&quot;</span></Toast>
     <Toast show={showMidnight} onDone={()=>setShowMidnight(false)} ms={3000} t={t}>
@@ -2069,12 +2327,13 @@ export default function FC30App() {
       padding:"12px 16px 8px",borderBottom:`1px solid ${t.border}`}}>
       <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:18}}>⚔️</span>
+          <span onClick={handleSwordTap} style={{fontSize:18,cursor:"pointer",padding:"4px 6px",borderRadius:6,transform:swordTaps>0?"scale(1.2)":"scale(1)",transition:"transform 0.15s"}}>⚔️</span>
           <div><h1 style={{fontFamily:FD,fontSize:18,color:t.cream,margin:0,lineHeight:1}}>
             {brave?"BRAVEHEART":"Hold the Line"}</h1>
-          <div style={{fontFamily:FB,fontSize:11,color:t.muted}}>{brave?"They may take our lives...":"Chapter 30 — Nehemiah 4:14"}</div></div></div>
+          <div onPointerDown={handleSubtitleDown} onPointerUp={handleSubtitleUp} onPointerLeave={handleSubtitleUp}
+            style={{fontFamily:FB,fontSize:11,color:t.muted,cursor:"default",userSelect:"none"}}>{brave?"They may take our lives...":"Chapter 30 — Nehemiah 4:14"}</div></div></div>
         <div style={{display:"flex",alignItems:"center",gap:6}}>
-          <div style={{display:"flex",gap:1}}>{Array.from({length:4}).map((_,i)=><Shield key={i} on={i<(D.strikes?.[user]||0)} s={10} t={t}/>)}</div>
+          <div onClick={handleShieldTap} style={{display:"flex",gap:1,cursor:"pointer",padding:"4px 6px",borderRadius:6}}>{Array.from({length:4}).map((_,i)=><Shield key={i} on={i<(D.strikes?.[user]||0)} s={10} t={t}/>)}</div>
           <button onClick={()=>{if(brave){toggleBrave();return}setTheme(theme==="dark"?"light":"dark")}}
             style={{background:"none",border:"none",color:t.muted,fontSize:16,cursor:"pointer",padding:4}}>{theme==="dark"?"☀️":"🌙"}</button>
           <button onClick={()=>setUser(user==="scott"?"filip":"scott")}
@@ -2169,4 +2428,5 @@ input,textarea,button{font-family:'Source Sans 3',system-ui,sans-serif}
 @keyframes urgPulse{0%,100%{opacity:1}50%{opacity:.6}}
 @keyframes goldPulse{0%,100%{border-color:rgba(212,173,94,.2)}50%{border-color:rgba(212,173,94,.4)}}
 @keyframes doneShimmer{0%,100%{box-shadow:0 0 16px rgba(114,191,129,0.25),inset 0 0 12px rgba(114,191,129,0.08);border-color:rgba(92,184,92,0.4)}50%{box-shadow:0 0 32px rgba(114,191,129,0.5),inset 0 0 22px rgba(114,191,129,0.18);border-color:rgba(126,214,126,0.75)}}
+@keyframes armorReveal{0%{opacity:0;transform:translateX(-12px)}100%{opacity:1;transform:translateX(0)}}
 `
