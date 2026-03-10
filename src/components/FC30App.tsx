@@ -1321,9 +1321,10 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
         <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center"}}>
           <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Day {dayNum+1} · Week {wk}</span>
           <UBadge hrs={hl} type="daily" t={t}/></div>
-        {dayNum<maxDay&&<button onClick={()=>setDayNum(maxDay)}
-          style={{fontFamily:FB,fontSize:11,fontWeight:700,color:t.gold,background:t.goldDim,border:`1px solid ${t.gold}44`,
-            borderRadius:6,padding:"3px 10px",cursor:"pointer",marginTop:4}}>→ Today</button>}
+        {dayNum<maxDay&&<button onClick={()=>{ const m=Math.max(0,Math.min(dn(today()),69)); setDayNum(m); setWeekView(Math.floor(m/7)+1) }}
+          style={{fontFamily:FB,fontSize:13,fontWeight:700,color:t.gold,background:t.goldDim,
+            border:`1.5px solid ${t.gold}88`,borderRadius:8,padding:"6px 16px",cursor:"pointer",
+            marginTop:6,animation:"goldPulse 2s ease infinite"}}>⚔️ → Today</button>}
       </div>
       <button onClick={()=>setDayNum(Math.min(maxDay,dayNum+1))} disabled={dayNum>=maxDay}
         style={{background:"none",border:"none",color:dayNum>=maxDay?t.mutedDark:t.cream,fontSize:22,cursor:"pointer",padding:"12px 16px",minWidth:48,minHeight:48}}>▶</button></div>
@@ -2254,10 +2255,18 @@ export default function FC30App() {
   const [showJoshua,setShowJoshua] = useState(false);const [showArmor,setShowArmor] = useState(false)
   const [showStillSmall,setShowStillSmall] = useState(false);const [showGideon,setShowGideon] = useState(false)
   const prevTotalRef = useRef(0)
-  // Date auto-advance at midnight
+  // Date auto-advance — visibilitychange fires when user returns to app (phone unlock,
+  // tab switch). setInterval alone is throttled/frozen by iOS when backgrounded.
   useEffect(()=>{
-    const id=setInterval(()=>{const cur=Math.max(0,Math.min(dn(today()),69));setDayNum(prev=>cur>prev?cur:prev)},30000)
-    return ()=>clearInterval(id)
+    const advance=()=>{
+      const cur=Math.max(0,Math.min(dn(today()),69))
+      setDayNum(prev=>{ if(cur>prev){setWeekView(Math.floor(cur/7)+1);return cur} return prev })
+    }
+    advance() // run immediately on mount in case page was cached from yesterday
+    const onVisible=()=>{ if(document.visibilityState==="visible") advance() }
+    document.addEventListener("visibilitychange",onVisible)
+    const id=setInterval(advance,60000)
+    return ()=>{ document.removeEventListener("visibilitychange",onVisible);clearInterval(id) }
   },[])
   // Gideon's 300
   useEffect(()=>{
