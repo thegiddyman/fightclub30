@@ -1321,7 +1321,7 @@ function TrackTab({D,mutate,user,dayNum,setDayNum,wk,t,brave,onLion,onFreedom,on
         <div style={{display:"flex",gap:8,justifyContent:"center",alignItems:"center"}}>
           <span style={{fontFamily:FB,fontSize:11,color:t.muted}}>Day {dayNum+1} · Week {wk}</span>
           <UBadge hrs={hl} type="daily" t={t}/></div>
-        {dayNum<maxDay&&<button onClick={()=>{ const m=Math.max(0,Math.min(dn(today()),69)); setDayNum(m); setWeekView(Math.floor(m/7)+1) }}
+        {dayNum<maxDay&&<button onClick={()=>setDayNum(Math.max(0,Math.min(dn(today()),69)))}
           style={{fontFamily:FB,fontSize:13,fontWeight:700,color:t.gold,background:t.goldDim,
             border:`1.5px solid ${t.gold}88`,borderRadius:8,padding:"6px 16px",cursor:"pointer",
             marginTop:6,animation:"goldPulse 2s ease infinite"}}>⚔️ → Today</button>}
